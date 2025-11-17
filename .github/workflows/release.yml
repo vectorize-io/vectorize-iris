@@ -57,7 +57,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd nodejs-api
-          npm ci
+          npm install
 
       - name: Build
         run: |

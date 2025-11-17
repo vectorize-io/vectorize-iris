@@ -44,6 +44,25 @@ All formatting and structure is preserved.
 Tables, lists, and other elements are properly extracted.
 ```
 
+## Plain Text Output
+
+```bash
+vectorize-iris document.pdf -o text
+```
+
+**Output:**
+```
+This is the extracted text from your PDF document.
+All formatting and structure is preserved.
+
+Tables, lists, and other elements are properly extracted.
+```
+
+**Pipe to file:**
+```bash
+vectorize-iris document.pdf -o text > output.txt
+```
+
 ## JSON Output (for piping)
 
 ```bash
@@ -290,7 +309,7 @@ Arguments:
 
 Options:
   -o, --output <FORMAT>
-          Output format [default: pretty] [possible values: pretty, json, yaml]
+          Output format [default: pretty] [possible values: pretty, json, yaml, text]
       --chunk-size <SIZE>
           Chunk size (default: 256)
       --metadata-schema <ID:SCHEMA>
@@ -361,11 +380,17 @@ vectorize-iris large-document.pdf \
 - Human-readable structured data
 - Good for config files
 
+### Text
+- Plain extracted text only to stdout
+- Progress messages to stderr
+- No formatting or structure
+- Perfect for direct piping to files or other tools
+
 ## CLI Options
 
 ```
 FILE                          Path to file (required)
--o, --output                  Output format: pretty, json, yaml (default: pretty)
+-o, --output                  Output format: pretty, json, yaml, text (default: pretty)
 --chunk-size                  Chunk size in characters (default: 256)
 --metadata-schema             Metadata schema (repeatable)
 --infer-metadata-schema       Auto-detect metadata structure

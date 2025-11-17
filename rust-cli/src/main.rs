@@ -40,7 +40,7 @@ struct Cli {
     #[arg(long)]
     org_id: Option<String>,
 
-    /// Output format
+    /// Output format (pretty: styled output, json: JSON format, yaml: YAML format, text: plain text only)
     #[arg(short = 'o', long, value_enum, default_value = "pretty")]
     output: OutputFormat,
 
@@ -74,6 +74,7 @@ enum OutputFormat {
     Pretty,
     Json,
     Yaml,
+    Text,
 }
 
 // Request/Response Models
@@ -420,6 +421,12 @@ fn format_output(data: &ExtractionResultData, format: &OutputFormat, has_schemas
         }
         OutputFormat::Yaml => {
             println!("{}", serde_yaml::to_string(data).unwrap());
+        }
+        OutputFormat::Text => {
+            // Only print the extracted text, nothing else
+            if let Some(text) = &data.text {
+                print!("{}", text);
+            }
         }
         OutputFormat::Pretty => {
             // Pretty format with beautiful styling

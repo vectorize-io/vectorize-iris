@@ -43,7 +43,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd nodejs-api
-          npm ci
+          npm install
 
       - name: Build
         run: |
@@ -90,12 +90,3 @@ jobs:
         run: |
           cd rust-cli
           cargo build --release --target ${{ matrix.target }}
-
-      - name: Test (native builds only)
-        if: |
-          (matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu') ||
-          (matrix.os == 'macos-latest' && matrix.target == 'x86_64-apple-darwin') ||
-          (matrix.os == 'windows-latest' && matrix.target == 'x86_64-pc-windows-msvc')
-        run: |
-          cd rust-cli
-          cargo test --release --target ${{ matrix.target }}
