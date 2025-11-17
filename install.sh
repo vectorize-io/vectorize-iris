@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Install script for vectorize-iris CLI
-# Usage: curl -sSL https://raw.githubusercontent.com/YOUR_USERNAME/vectorize-iris/main/install.sh | bash
 
 set -e
 
@@ -13,7 +12,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # GitHub repository
-REPO="YOUR_USERNAME/vectorize-iris"
+REPO="vectorize-io/vectorize-iris"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 
 echo -e "${BLUE}Installing vectorize-iris CLI...${NC}"
