@@ -56,6 +56,12 @@ vectorize-iris document.pdf
 
 ## Installation
 
+**CLI:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/vectorize-io/vectorize-iris/refs/heads/main/install.sh | sh
+```
+
+
 **Python:**
 ```bash
 pip install vectorize-iris
@@ -66,10 +72,7 @@ pip install vectorize-iris
 npm install @vectorize-io/iris
 ```
 
-**Rust CLI:**
-```bash
-curl -fsSL https://install.vectorize.io/iris | sh
-```
+
 
 ## Features
 
