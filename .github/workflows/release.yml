@@ -1,0 +1,179 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'py-*'
+      - 'node-*'
+      - 'cli-*'
+
+permissions:
+  contents: write
+
+jobs:
+  release-python:
+    name: Release Python to PyPI
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/py-')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Build Python package
+        run: |
+          cd python-api
+          python -m build
+
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          cd python-api
+          python -m twine upload dist/*
+
+  release-nodejs:
+    name: Release Node.js to npm
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/node-')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: |
+          cd nodejs-api
+          npm ci
+
+      - name: Build
+        run: |
+          cd nodejs-api
+          npm run build
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          cd nodejs-api
+          npm publish
+
+  build-rust-binaries:
+    name: Build Rust CLI - ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    if: startsWith(github.ref, 'refs/tags/cli-')
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: vectorize-iris
+            asset_name: vectorize-iris-linux-x86_64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            artifact_name: vectorize-iris
+            asset_name: vectorize-iris-linux-aarch64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact_name: vectorize-iris
+            asset_name: vectorize-iris-macos-x86_64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: vectorize-iris
+            asset_name: vectorize-iris-macos-aarch64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: vectorize-iris.exe
+            asset_name: vectorize-iris-windows-x86_64.exe
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross-compilation tools (Linux ARM)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Build
+        run: |
+          cd rust-cli
+          cargo build --release --target ${{ matrix.target }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: rust-cli/target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
+
+  create-release:
+    name: Create GitHub Release
+    needs: build-rust-binaries
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/cli-')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+
+          # Linux x86_64
+          cp artifacts/vectorize-iris-linux-x86_64/vectorize-iris release-assets/vectorize-iris-linux-x86_64
+          chmod +x release-assets/vectorize-iris-linux-x86_64
+          tar -czf release-assets/vectorize-iris-linux-x86_64.tar.gz -C release-assets vectorize-iris-linux-x86_64
+
+          # Linux aarch64
+          cp artifacts/vectorize-iris-linux-aarch64/vectorize-iris release-assets/vectorize-iris-linux-aarch64
+          chmod +x release-assets/vectorize-iris-linux-aarch64
+          tar -czf release-assets/vectorize-iris-linux-aarch64.tar.gz -C release-assets vectorize-iris-linux-aarch64
+
+          # macOS x86_64
+          cp artifacts/vectorize-iris-macos-x86_64/vectorize-iris release-assets/vectorize-iris-macos-x86_64
+          chmod +x release-assets/vectorize-iris-macos-x86_64
+          tar -czf release-assets/vectorize-iris-macos-x86_64.tar.gz -C release-assets vectorize-iris-macos-x86_64
+
+          # macOS aarch64
+          cp artifacts/vectorize-iris-macos-aarch64/vectorize-iris release-assets/vectorize-iris-macos-aarch64
+          chmod +x release-assets/vectorize-iris-macos-aarch64
+          tar -czf release-assets/vectorize-iris-macos-aarch64.tar.gz -C release-assets vectorize-iris-macos-aarch64
+
+          # Windows x86_64
+          cp artifacts/vectorize-iris-windows-x86_64.exe/vectorize-iris.exe release-assets/vectorize-iris-windows-x86_64.exe
+          zip release-assets/vectorize-iris-windows-x86_64.zip release-assets/vectorize-iris-windows-x86_64.exe
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release-assets/vectorize-iris-linux-x86_64.tar.gz
+            release-assets/vectorize-iris-linux-aarch64.tar.gz
+            release-assets/vectorize-iris-macos-x86_64.tar.gz
+            release-assets/vectorize-iris-macos-aarch64.tar.gz
+            release-assets/vectorize-iris-windows-x86_64.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: true

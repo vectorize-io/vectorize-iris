@@ -1,0 +1,23 @@
+[package]
+name = "vectorize-iris"
+version = "0.1.0"
+edition = "2021"
+authors = ["Vectorize"]
+description = "CLI tool for extracting text from files using Vectorize Iris"
+
+[[bin]]
+name = "vectorize-iris"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+tokio = { version = "1.40", features = ["full"] }
+reqwest = { version = "0.12", features = ["json", "blocking"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+anyhow = "1.0"
+indicatif = "0.17"
+console = "0.15"
+textwrap = "0.16"
+syntect = "5.2"
