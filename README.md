@@ -4,6 +4,9 @@
 
 Vectorize Iris is an advanced document extraction service that uses AI to accurately extract text, structure, and metadata from PDFs, images, and other document formats. Unlike traditional OCR tools, Iris understands document structure, preserves formatting, and can extract specific information using natural language instructions.
 
+Documentation: [docs.vectorize.io](https://docs.vectorize.io/build-deploy/extract-information/extraction-tester/#vectorize-iris)
+
+
 ## Why Iris?
 
 Traditional text extraction tools struggle with:
@@ -36,7 +39,7 @@ print(result.text)
 
 ### 📦 Node.js/TypeScript API
 ```typescript
-import { extractTextFromFile } from 'vectorize-iris';
+import { extractTextFromFile } from '@vectorize-io/iris';
 
 const result = await extractTextFromFile('document.pdf');
 console.log(result.text);
@@ -60,7 +63,7 @@ pip install vectorize-iris
 
 **Node.js:**
 ```bash
-npm install vectorize-iris
+npm install @vectorize-io/iris
 ```
 
 **Rust CLI:**

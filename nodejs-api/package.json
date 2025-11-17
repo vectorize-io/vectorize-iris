@@ -1,5 +1,5 @@
 {
-  "name": "vectorize-iris",
+  "name": "@vectorize-io/iris",
   "version": "0.1.0",
   "description": "Simple text extraction from files using Vectorize Iris",
   "main": "dist/index.js",

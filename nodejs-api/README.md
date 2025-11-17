@@ -5,7 +5,7 @@ Simple TypeScript library for extracting text from documents using Vectorize Iri
 ## Installation
 
 ```bash
-npm install vectorize-iris
+npm install @vectorize-io/iris
 ```
 
 Set your credentials:
@@ -17,7 +17,7 @@ export VECTORIZE_ORG_ID="your-org-id"
 ## Basic Text Extraction
 
 ```typescript
-import { extractTextFromFile } from 'vectorize-iris';
+import { extractTextFromFile } from '@vectorize-io/iris';
 
 const result = await extractTextFromFile('document.pdf');
 console.log(result.text);
@@ -34,7 +34,7 @@ Tables, lists, and other elements are properly extracted.
 ## Extract from Buffer
 
 ```typescript
-import { extractText } from 'vectorize-iris';
+import { extractText } from '@vectorize-io/iris';
 import * as fs from 'fs';
 
 const fileBuffer = fs.readFileSync('document.pdf');
@@ -51,8 +51,8 @@ Extracted 5536 characters
 ## Chunking for RAG
 
 ```typescript
-import { extractTextFromFile } from 'vectorize-iris';
-import type { ExtractionOptions } from 'vectorize-iris';
+import { extractTextFromFile } from '@vectorize-io/iris';
+import type { ExtractionOptions } from '@vectorize-io/iris';
 
 const options: ExtractionOptions = {
   chunkSize: 512
@@ -80,7 +80,7 @@ The training process involves adjusting weights...
 ## Custom Parsing Instructions
 
 ```typescript
-import { extractTextFromFile } from 'vectorize-iris';
+import { extractTextFromFile } from '@vectorize-io/iris';
 
 const result = await extractTextFromFile('report.pdf', {
   parsingInstructions: 'Extract only tables and numerical data, ignore narrative text'
@@ -106,7 +106,7 @@ West      | $380K  | +10%
 ## Inferred Metadata Schema
 
 ```typescript
-import { extractTextFromFile } from 'vectorize-iris';
+import { extractTextFromFile } from '@vectorize-io/iris';
 
 const result = await extractTextFromFile('invoice.pdf', {
   inferMetadataSchema: true
@@ -133,7 +133,7 @@ console.log(JSON.stringify(metadata, null, 2));
 ```typescript
 import express from 'express';
 import multer from 'multer';
-import { extractText } from 'vectorize-iris';
+import { extractText } from '@vectorize-io/iris';
 import * as fs from 'fs';
 
 const app = express();
@@ -179,7 +179,7 @@ curl -F "file=@document.pdf" http://localhost:3000/extract
 ## Batch Processing
 
 ```typescript
-import { extractTextFromFile } from 'vectorize-iris';
+import { extractTextFromFile } from '@vectorize-io/iris';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -215,7 +215,7 @@ Processing report-q3.pdf...
 ## Parallel Processing
 
 ```typescript
-import { extractTextFromFile } from 'vectorize-iris';
+import { extractTextFromFile } from '@vectorize-io/iris';
 
 const files = ['doc1.pdf', 'doc2.pdf', 'doc3.pdf'];
 
@@ -238,7 +238,7 @@ doc3.pdf: 2156 chars
 ## Error Handling
 
 ```typescript
-import { extractTextFromFile, VectorizeIrisError } from 'vectorize-iris';
+import { extractTextFromFile, VectorizeIrisError } from '@vectorize-io/iris';
 
 try {
   const result = await extractTextFromFile('document.pdf');
@@ -264,7 +264,7 @@ import type {
   ExtractionOptions,
   ExtractionResultData,
   MetadataExtractionStrategySchema
-} from 'vectorize-iris';
+} from '@vectorize-io/iris';
 
 // Type-safe options
 const options: ExtractionOptions = {

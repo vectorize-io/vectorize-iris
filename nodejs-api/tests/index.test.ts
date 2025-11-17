@@ -1,5 +1,5 @@
 /**
- * Unit tests for vectorize-iris module
+ * Unit tests for @vectorize-io/iris module
  */
 
 import * as fs from 'fs/promises';
