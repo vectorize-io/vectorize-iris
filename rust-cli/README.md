@@ -5,8 +5,10 @@ Beautiful command-line tool for extracting text from documents using Vectorize I
 ## Installation
 
 ```bash
-cargo install vectorize-iris
+curl -fsSL https://install.vectorize.io/iris | sh
 ```
+
+Or install manually from [releases](https://github.com/vectorize/vectorize-iris/releases).
 
 Set your credentials:
 ```bash

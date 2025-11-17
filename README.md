@@ -65,10 +65,8 @@ npm install vectorize-iris
 
 **Rust CLI:**
 ```bash
-cargo install vectorize-iris
+curl -fsSL https://install.vectorize.io/iris | sh
 ```
-
-Or use the [install script](install.sh).
 
 ## Features
 
