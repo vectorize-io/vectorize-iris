@@ -1,20 +1,55 @@
-# Node.js/TypeScript API - Examples
+# Vectorize Iris Node.js SDK
 
-Simple TypeScript library for extracting text from documents using Vectorize Iris.
+**AI-powered document text extraction for Node.js & TypeScript**
 
-## Installation
+Extract text, tables, and structured data from PDFs, images, and documents with a single async function. Built on Vectorize Iris, the industry-leading AI extraction service.
+
+[![npm version](https://badge.fury.io/js/@vectorize-io%2Firis.svg)](https://badge.fury.io/js/@vectorize-io%2Firis)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## Why Iris?
+
+Traditional OCR tools struggle with complex layouts, poor scans, and structured data. Iris uses advanced AI to deliver:
+
+- ✨ **High accuracy** - Even with poor quality or complex documents
+- 📊 **Structure preservation** - Maintains tables, lists, and formatting
+- 🎯 **Smart chunking** - Semantic splitting perfect for RAG pipelines
+- 🔍 **Metadata extraction** - Extract specific fields using natural language
+- 🚀 **TypeScript native** - Full type safety with built-in types
+- ⚡ **Async-first** - Promise-based API for modern Node.js
+
+## Quick Start
+
+### Installation
 
 ```bash
 npm install @vectorize-io/iris
 ```
 
-Set your credentials:
+### Authentication
+
+Set your credentials (get them at [vectorize.io](https://vectorize.io)):
+
 ```bash
 export VECTORIZE_API_TOKEN="your-token"
 export VECTORIZE_ORG_ID="your-org-id"
 ```
 
-## Basic Text Extraction
+### Basic Usage
+
+```typescript
+import { extractTextFromFile } from '@vectorize-io/iris';
+
+const result = await extractTextFromFile('document.pdf');
+console.log(result.text);
+```
+
+That's it! Iris handles file upload, extraction, and polling automatically.
+
+## Features
+
+### Basic Text Extraction
 
 ```typescript
 import { extractTextFromFile } from '@vectorize-io/iris';

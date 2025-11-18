@@ -1,22 +1,64 @@
-# Rust CLI - Examples
+# Vectorize Iris CLI
 
-Beautiful command-line tool for extracting text from documents using Vectorize Iris.
+**⚡ Lightning-fast AI document extraction from your terminal**
 
-## Installation
+A beautiful, cross-platform CLI for extracting text, tables, and structured data from PDFs, images, and documents. Powered by Vectorize Iris AI.
+
+[![Crates.io](https://img.shields.io/crates/v/vectorize-iris.svg)](https://crates.io/crates/vectorize-iris)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## Why Use the CLI?
+
+- 🎨 **Beautiful output** - Color-coded, formatted terminal display
+- ⚡ **Blazing fast** - Native Rust performance
+- 🔧 **Scriptable** - JSON/YAML output for automation
+- 📦 **Zero dependencies** - Single binary, no runtime needed
+- 🌍 **Cross-platform** - Works on Linux, macOS, and Windows
+- 🔌 **Pipeline-ready** - Perfect for shell scripts and CI/CD
+
+## Quick Start
+
+### Installation
 
 ```bash
-curl -fsSL https://install.vectorize.io/iris | sh
+curl -fsSL https://raw.githubusercontent.com/vectorize-io/vectorize-iris/refs/heads/main/install.sh | sh
 ```
 
-Or install manually from [releases](https://github.com/vectorize/vectorize-iris/releases).
+**Alternative methods:**
+- Download from [GitHub Releases](https://github.com/vectorize-io/vectorize-iris/releases)
+- Install with `cargo install vectorize-iris` (requires Rust)
 
-Set your credentials:
+### Authentication
+
+Set your credentials (get them at [vectorize.io](https://vectorize.io)):
+
 ```bash
 export VECTORIZE_API_TOKEN="your-token"
 export VECTORIZE_ORG_ID="your-org-id"
 ```
 
-## Basic Text Extraction
+### Basic Usage
+
+```bash
+vectorize-iris document.pdf
+```
+
+That's it! Get beautiful, formatted output in your terminal.
+
+## Output Formats
+
+The CLI supports multiple output formats for different use cases:
+
+| Format | Use Case | Command |
+|--------|----------|---------|
+| **Pretty** (default) | Interactive use, beautiful terminal output | `vectorize-iris doc.pdf` |
+| **JSON** | Scripting, piping to `jq` | `vectorize-iris doc.pdf -o json` |
+| **YAML** | Config files, human-readable data | `vectorize-iris doc.pdf -o yaml` |
+| **Text** | Plain text only, no formatting | `vectorize-iris doc.pdf -o text` |
+
+## Examples
+
+### Basic Text Extraction
 
 ```bash
 vectorize-iris document.pdf

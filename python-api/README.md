@@ -1,20 +1,54 @@
-# Python API - Examples
+# Vectorize Iris Python SDK
 
-Simple Python library for extracting text from documents using Vectorize Iris.
+**AI-powered document text extraction for Python**
 
-## Installation
+Extract text, tables, and structured data from PDFs, images, and documents with a single function call. Built on Vectorize Iris, the industry-leading AI extraction service.
+
+[![PyPI version](https://badge.fury.io/py/vectorize-iris.svg)](https://badge.fury.io/py/vectorize-iris)
+[![Python](https://img.shields.io/pypi/pyversions/vectorize-iris.svg)](https://pypi.org/project/vectorize-iris/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## Why Iris?
+
+Traditional OCR tools struggle with complex layouts, poor scans, and structured data. Iris uses advanced AI to deliver:
+
+- ✨ **High accuracy** - Even with poor quality or complex documents
+- 📊 **Structure preservation** - Maintains tables, lists, and formatting
+- 🎯 **Smart chunking** - Semantic splitting perfect for RAG pipelines
+- 🔍 **Metadata extraction** - Extract specific fields using natural language
+- ⚡ **Simple API** - One line of code to extract text
+
+## Quick Start
+
+### Installation
 
 ```bash
 pip install vectorize-iris
 ```
 
-Set your credentials:
+### Authentication
+
+Set your credentials (get them at [vectorize.io](https://vectorize.io)):
+
 ```bash
 export VECTORIZE_API_TOKEN="your-token"
 export VECTORIZE_ORG_ID="your-org-id"
 ```
 
-## Basic Text Extraction
+### Basic Usage
+
+```python
+from vectorize_iris import extract_text_from_file
+
+result = extract_text_from_file('document.pdf')
+print(result.text)
+```
+
+That's it! Iris handles file upload, extraction, and polling automatically.
+
+## Features
+
+### Basic Text Extraction
 
 ```python
 from vectorize_iris import extract_text_from_file

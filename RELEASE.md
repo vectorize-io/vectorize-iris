@@ -49,13 +49,17 @@ PyPI uses **Trusted Publishing** (OIDC), which requires no tokens or passwords:
 
 For more info: https://docs.pypi.org/trusted-publishers/
 
-### 2. npm Token (for Node.js releases)
+### 2. npm Trusted Publishing (for Node.js releases)
 
-1. Log in to npm: `npm login`
-2. Generate a new access token: https://www.npmjs.com/settings/YOUR_USERNAME/tokens
-3. Create a "Automation" token (or "Publish" token)
-4. In your GitHub repository, go to Settings > Secrets and variables > Actions
-5. Create a new secret named `NPM_TOKEN` and paste the token
+npm uses **Provenance** (similar to PyPI's Trusted Publishing), which requires no tokens:
+
+1. Make sure you have publishing rights to the `@vectorize-io/iris` package on npm
+2. The package must already exist on npm (do a manual publish first if needed)
+3. Once published, npm automatically trusts releases from GitHub Actions with `--provenance` flag
+
+**No additional setup required** - npm will automatically verify the GitHub Actions identity using OIDC.
+
+For more info: https://docs.npmjs.com/generating-provenance-statements
 
 ### 3. Update install.sh
 
@@ -142,7 +146,7 @@ npm install vectorize-iris
 
 ### Rust CLI (via install script)
 ```bash
-curl -sSL https://raw.githubusercontent.com/YOUR_USERNAME/vectorize-iris/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/vectorize-io/vectorize-iris/refs/heads/main/install.sh | sh
 ```
 
 Or download binaries directly from the [GitHub Releases page](https://github.com/YOUR_USERNAME/vectorize-iris/releases).
@@ -194,6 +198,7 @@ git push origin py-0.1.0
 cd nodejs-api
 npm run build
 npm publish --access public  # Required for scoped packages (@vectorize-io/iris)
+# Note: Add --provenance flag when publishing from CI for trusted publishing
 
 # Create and push tag
 git tag node-0.2.0
