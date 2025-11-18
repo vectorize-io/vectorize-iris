@@ -69,7 +69,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd nodejs-api
-          npm publish
+          npm publish --access public
 
   build-rust-binaries:
     name: Build Rust CLI - ${{ matrix.target }}

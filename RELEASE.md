@@ -193,7 +193,7 @@ git push origin py-0.1.0
 # Update version in nodejs-api/package.json first
 cd nodejs-api
 npm run build
-npm publish
+npm publish --access public  # Required for scoped packages (@vectorize-io/iris)
 
 # Create and push tag
 git tag node-0.2.0
