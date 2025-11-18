@@ -10,6 +10,7 @@ use std::path::PathBuf;
 use std::thread;
 use std::time::Duration;
 use textwrap::{wrap, Options};
+use tempfile::NamedTempFile;
 
 // Emojis for beautiful output
 static SPARKLE: Emoji = Emoji("✨", "");
@@ -28,9 +29,9 @@ static CHART: Emoji = Emoji("📊", "=");
 #[command(about = "Extract text from files using Vectorize Iris", long_about = None)]
 #[command(version)]
 struct Cli {
-    /// Path to the file to extract text from
+    /// Path or URL to the file to extract text from
     #[arg(value_name = "FILE")]
-    file_path: PathBuf,
+    file_path: String,
 
     /// API token (defaults to VECTORIZE_API_TOKEN env var)
     #[arg(long)]
@@ -43,6 +44,10 @@ struct Cli {
     /// Output format (pretty: styled output, json: JSON format, yaml: YAML format, text: plain text only)
     #[arg(short = 'o', long, value_enum, default_value = "pretty")]
     output: OutputFormat,
+
+    /// Output file path (writes to file instead of stdout)
+    #[arg(short = 'f', long, value_name = "FILE")]
+    output_file: Option<PathBuf>,
 
     /// Chunk size (default: 256)
     #[arg(long)]
@@ -164,6 +169,156 @@ fn create_spinner(msg: &str) -> ProgressBar {
     pb.set_message(msg.to_string());
     pb.enable_steady_tick(Duration::from_millis(80));
     pb
+}
+
+fn is_url(path: &str) -> bool {
+    path.starts_with("http://") || path.starts_with("https://")
+}
+
+fn download_url(url: &str) -> Result<NamedTempFile> {
+    eprintln!();
+    eprintln!("{} {}", ROCKET, style("Downloading file from URL").cyan().bold());
+    eprintln!("{}", style("─".repeat(50)).dim());
+    eprintln!();
+
+    let client = Client::new();
+    let response = client
+        .get(url)
+        .send()
+        .context("Failed to download file from URL")?;
+
+    if !response.status().is_success() {
+        return Err(anyhow!(
+            "Failed to download file: HTTP {}",
+            response.status()
+        ));
+    }
+
+    let mut temp_file = NamedTempFile::new()
+        .context("Failed to create temporary file")?;
+
+    let bytes = response.bytes()
+        .context("Failed to read response body")?;
+
+    std::io::Write::write_all(&mut temp_file, &bytes)
+        .context("Failed to write to temporary file")?;
+
+    eprintln!("{} Downloaded {} bytes to temporary file", CHECK, style(format_bytes(bytes.len() as u64)).cyan());
+    eprintln!();
+
+    Ok(temp_file)
+}
+
+fn process_directory(
+    dir_path: &PathBuf,
+    api_token: &str,
+    org_id: &str,
+    output_format: &OutputFormat,
+    output_dir: Option<&PathBuf>,
+    chunk_size: Option<u32>,
+    metadata_schemas: Vec<String>,
+    infer_metadata_schema: bool,
+    parsing_instructions: Option<String>,
+    poll_interval: u64,
+    timeout: u64,
+) -> Result<()> {
+    eprintln!();
+    eprintln!("{} {}", PACKAGE, style("Processing Directory").cyan().bold());
+    eprintln!("{}", style("─".repeat(50)).dim());
+    eprintln!();
+
+    // Collect all files in directory
+    let entries: Vec<_> = fs::read_dir(dir_path)?
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().is_file())
+        .collect();
+
+    if entries.is_empty() {
+        eprintln!("{} No files found in directory", CROSS);
+        return Ok(());
+    }
+
+    eprintln!("{} Found {} files to process", BULB, style(entries.len()).cyan().bold());
+    eprintln!();
+
+    // Create output directory if needed
+    let output_path = if let Some(out_dir) = output_dir {
+        fs::create_dir_all(out_dir)
+            .context(format!("Failed to create output directory: {}", out_dir.display()))?;
+        Some(out_dir.clone())
+    } else {
+        None
+    };
+
+    let has_schemas = !metadata_schemas.is_empty() || infer_metadata_schema;
+    let mut successful = 0;
+    let mut failed = 0;
+
+    // Process each file
+    for (idx, entry) in entries.iter().enumerate() {
+        let file_path = entry.path();
+        let file_name = file_path.file_name().unwrap().to_string_lossy();
+
+        eprintln!();
+        eprintln!("{} {} {}/{} - {}",
+            GEAR,
+            style("Processing").cyan(),
+            style(idx + 1).bold(),
+            style(entries.len()).bold(),
+            style(&file_name).yellow()
+        );
+
+        match extract_text(
+            &file_path,
+            api_token,
+            org_id,
+            chunk_size,
+            metadata_schemas.clone(),
+            infer_metadata_schema,
+            parsing_instructions.clone(),
+            poll_interval,
+            timeout,
+        ) {
+            Ok(result) => {
+                // Determine output file path
+                let out_file = if let Some(ref out_path) = output_path {
+                    let base_name = file_path.file_stem().unwrap().to_string_lossy();
+                    let extension = match output_format {
+                        OutputFormat::Json => "json",
+                        OutputFormat::Yaml => "yaml",
+                        OutputFormat::Text => "txt",
+                        OutputFormat::Pretty => "txt",
+                    };
+                    Some(out_path.join(format!("{}.{}", base_name, extension)))
+                } else {
+                    None
+                };
+
+                if let Err(e) = format_output(&result, output_format, has_schemas, out_file.as_ref()) {
+                    eprintln!("{} Failed to write output: {}", CROSS, e);
+                    failed += 1;
+                } else {
+                    successful += 1;
+                }
+            }
+            Err(e) => {
+                eprintln!("{} Extraction failed: {}", CROSS, style(&e.to_string()).red());
+                failed += 1;
+            }
+        }
+    }
+
+    eprintln!();
+    eprintln!("{}", style("─".repeat(50)).dim());
+    eprintln!("{} {}", SPARKLE, style("Batch Processing Complete").green().bold());
+    eprintln!();
+    eprintln!("  {} Successful: {}", CHECK, style(successful).green().bold());
+    if failed > 0 {
+        eprintln!("  {} Failed: {}", CROSS, style(failed).red().bold());
+    }
+    eprintln!();
+
+    Ok(())
 }
 
 fn extract_text(
@@ -414,18 +569,31 @@ fn print_wrapped_text(text: &str, indent: usize) {
     }
 }
 
-fn format_output(data: &ExtractionResultData, format: &OutputFormat, has_schemas: bool) {
+fn write_output(content: String, output_file: Option<&PathBuf>) -> Result<()> {
+    if let Some(path) = output_file {
+        fs::write(path, content)
+            .context(format!("Failed to write to file: {}", path.display()))?;
+        eprintln!("{} Output written to {}", CHECK, style(path.display()).cyan());
+    } else {
+        print!("{}", content);
+    }
+    Ok(())
+}
+
+fn format_output(data: &ExtractionResultData, format: &OutputFormat, has_schemas: bool, output_file: Option<&PathBuf>) -> Result<()> {
     match format {
         OutputFormat::Json => {
-            println!("{}", serde_json::to_string_pretty(data).unwrap());
+            let json = serde_json::to_string_pretty(data).unwrap();
+            write_output(json, output_file)?;
         }
         OutputFormat::Yaml => {
-            println!("{}", serde_yaml::to_string(data).unwrap());
+            let yaml = serde_yaml::to_string(data).unwrap();
+            write_output(yaml, output_file)?;
         }
         OutputFormat::Text => {
             // Only print the extracted text, nothing else
             if let Some(text) = &data.text {
-                print!("{}", text);
+                write_output(text.clone(), output_file)?;
             }
         }
         OutputFormat::Pretty => {
@@ -512,9 +680,16 @@ fn format_output(data: &ExtractionResultData, format: &OutputFormat, has_schemas
             println!("{}", style("─".repeat(60)).dim());
             println!("{} {}", SPARKLE, style("Extraction complete!").green().bold());
 
+            if output_file.is_some() {
+                eprintln!();
+                eprintln!("{} Note: Pretty format output is not saved to file. Use -o json/yaml/text for file output.",
+                    style("ℹ").cyan());
+            }
+
             println!();
         }
     }
+    Ok(())
 }
 
 fn main() -> Result<()> {
@@ -531,11 +706,38 @@ fn main() -> Result<()> {
         .or_else(|| env::var("VECTORIZE_ORG_ID").ok())
         .context("Missing org ID. Set VECTORIZE_ORG_ID env var or use --org-id flag")?;
 
-    // Extract text
+    // Handle URL, directory, or local file path
+    let _temp_file; // Keep temp file alive until end of function
+    let file_path: PathBuf = if is_url(&cli.file_path) {
+        _temp_file = download_url(&cli.file_path)?;
+        _temp_file.path().to_path_buf()
+    } else {
+        PathBuf::from(&cli.file_path)
+    };
+
+    // Check if input is a directory
+    if file_path.is_dir() {
+        // Process all files in directory
+        return process_directory(
+            &file_path,
+            &api_token,
+            &org_id,
+            &cli.output,
+            cli.output_file.as_ref(),
+            cli.chunk_size,
+            cli.metadata_schemas,
+            cli.infer_metadata_schema,
+            cli.parsing_instructions,
+            cli.poll_interval,
+            cli.timeout,
+        );
+    }
+
+    // Extract text from single file
     let has_schemas = !cli.metadata_schemas.is_empty() || cli.infer_metadata_schema;
 
     let result = extract_text(
-        &cli.file_path,
+        &file_path,
         &api_token,
         &org_id,
         cli.chunk_size,
@@ -547,7 +749,7 @@ fn main() -> Result<()> {
     )?;
 
     // Format and print output
-    format_output(&result, &cli.output, has_schemas);
+    format_output(&result, &cli.output, has_schemas, cli.output_file.as_ref())?;
 
     Ok(())
 }

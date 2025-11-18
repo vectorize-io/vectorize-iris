@@ -1,6 +1,6 @@
 # Vectorize Iris Python SDK
 
-**AI-powered document text extraction for Python**
+**Document text extraction for Python**
 
 Extract text, tables, and structured data from PDFs, images, and documents with a single function call. Built on Vectorize Iris, the industry-leading AI extraction service.
 

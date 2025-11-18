@@ -1,4 +1,4 @@
-# Vectorize Iris - Simple Text Extraction
+# Vectorize Iris
 
 **Extract text from any document with AI-powered precision.**
 
@@ -9,19 +9,21 @@ Documentation: [docs.vectorize.io](https://docs.vectorize.io/build-deploy/extrac
 
 ## Why Iris?
 
-Traditional text extraction tools struggle with:
-- Complex layouts (multi-column documents, tables, forms)
-- Poor quality scans or images
-- Mixed content types (text, tables, images)
-- Structured data extraction
-- Preserving document semantics
+Traditional OCR tools struggle with complex layouts, poor scans, and structured data. **Iris uses advanced AI** to understand document structure and context, delivering:
 
-**Iris solves these problems** by using advanced AI models that understand document structure and context, delivering:
-- ✨ **High accuracy** - Even with poor quality or complex documents
+- ✨ **High accuracy** - Handles poor quality scans and complex layouts
 - 📊 **Structure preservation** - Maintains tables, lists, and formatting
-- 🎯 **Smart chunking** - Splits documents at semantic boundaries
+- 🎯 **Smart chunking** - Semantic splitting for RAG pipelines
 - 🔍 **Metadata extraction** - Extract specific fields using natural language
 - 🚀 **Simple API** - One function call to extract text
+- ⚡ **Parallel processing** - Process multiple documents simultaneously
+- 🌐 **URL support** - Extract directly from HTTP/HTTPS URLs
+- 📂 **Batch processing** - Process entire directories automatically
+- 🔧 **Multiple formats** - Output as JSON, YAML, or plain text
+- 🪶 **Lightweight** - Single binary CLI with no dependencies
+- ☁️ **Cloud-native** - Serverless-ready APIs
+- 🌍 **Multi-lingual** - 100+ languages including Hindi, Arabic, Chinese
+- 🔌 **Multi-platform** - Python, Node.js, and CLI support
 
 ## Quick Start
 
@@ -47,12 +49,11 @@ console.log(result.text);
 
 [→ See Node.js examples](nodejs-api/)
 
-### ⚡ Rust CLI
+### ⚡ CLI
+
 ```bash
 vectorize-iris document.pdf
 ```
-
-[→ See CLI examples](rust-cli/)
 
 ## Installation
 
@@ -105,6 +106,188 @@ result = extract_text_from_file('document.pdf', options=ExtractionOptions(
 ))
 ```
 
+## CLI Examples
+
+### Basic Extraction
+
+Beautiful terminal output with progress indicators:
+
+```bash
+vectorize-iris document.pdf
+```
+
+**Output:**
+```
+✨ Vectorize Iris Extraction
+──────────────────────────────────────────────────
+
+✓ Upload prepared
+✓ File uploaded successfully
+✓ Extraction started
+✓ Extraction completed in 7s
+
+─────────────────────────────────────────────────────────
+📄 Extracted Text
+─────────────────────────────────────────────────────────
+
+Stats: 5536 chars • 1245 words • 89 lines
+
+This is the extracted text from your PDF document.
+All formatting and structure is preserved.
+
+Tables, lists, and other elements are properly extracted.
+```
+
+### Extract from URL
+
+Download and extract files directly from HTTP/HTTPS URLs:
+
+```bash
+vectorize-iris https://example.com/document.pdf
+```
+
+**Output:**
+```
+🚀 Downloading file from URL
+──────────────────────────────────────────────────
+
+✓ Downloaded 2.1 MB to temporary file
+
+✨ Vectorize Iris Extraction
+──────────────────────────────────────────────────
+
+✓ Upload prepared
+✓ File uploaded successfully
+✓ Extraction started
+✓ Extraction completed in 8s
+```
+
+### JSON Output (for piping)
+
+```bash
+vectorize-iris document.pdf -o json
+```
+
+**Output:**
+```json
+{
+  "success": true,
+  "text": "This is the extracted text from your PDF document...",
+  "chunks": null,
+  "metadata": null
+}
+```
+
+**Pipe to jq:**
+```bash
+vectorize-iris document.pdf -o json | jq -r '.text' > output.txt
+```
+
+### Plain Text Output
+
+Get only the extracted text:
+
+```bash
+vectorize-iris document.pdf -o text
+```
+
+**Pipe directly:**
+```bash
+vectorize-iris document.pdf -o text > output.txt
+```
+
+### Save to File
+
+Use `-f` to save output directly:
+
+```bash
+vectorize-iris document.pdf -o json -f output.json
+```
+
+**Output:**
+```
+✨ Vectorize Iris Extraction
+──────────────────────────────────────────────────
+
+✓ Upload prepared
+✓ File uploaded successfully
+✓ Extraction started
+✓ Extraction completed in 7s
+✓ Output written to output.json
+```
+
+### Process Directory
+
+Process all files in a directory automatically:
+
+```bash
+vectorize-iris ./documents -f ./output
+```
+
+**Output:**
+```
+📦 Processing Directory
+──────────────────────────────────────────────────
+
+💡 Found 5 files to process
+
+⚙️  Processing 1/5 - report-q1.pdf
+✨ Vectorize Iris Extraction
+──────────────────────────────────────────────────
+✓ Upload prepared
+✓ File uploaded successfully
+✓ Extraction started
+✓ Extraction completed in 8s
+✓ Output written to output/report-q1.txt
+
+⚙️  Processing 2/5 - report-q2.pdf
+...
+
+──────────────────────────────────────────────────
+✨ Batch Processing Complete
+
+  ✓ Successful: 5
+```
+
+**With custom output format:**
+```bash
+# Extract all PDFs to JSON
+vectorize-iris ./documents -o json -f ./output
+
+# Extract all files to plain text
+vectorize-iris ./scans -o text -f ./extracted
+```
+
+### Chunking for RAG
+
+```bash
+vectorize-iris long-document.pdf --chunk-size 512
+```
+
+Splits documents at semantic boundaries, perfect for RAG pipelines.
+
+### Custom Parsing Instructions
+
+```bash
+vectorize-iris report.pdf --parsing-instructions "Extract only tables and numerical data, ignore narrative text"
+```
+
+### Advanced Options
+
+```bash
+# Custom chunk size with metadata extraction
+vectorize-iris document.pdf \
+  --chunk-size 256 \
+  --infer-metadata-schema \
+  --parsing-instructions "Focus on extracting structured data" \
+  -o yaml -f output.yaml
+
+# Longer timeout for large documents
+vectorize-iris large-document.pdf \
+  --timeout 600 \
+  --poll-interval 5
+```
+
 ## Configuration
 
 Set your API credentials:
@@ -121,10 +304,6 @@ Get your credentials at [Vectorize Console](https://vectorize.io).
 For detailed documentation, API reference, and advanced features:
 
 📚 **[docs.vectorize.io](https://docs.vectorize.io)**
-
-## Examples
-
-See the [examples](examples/) directory for sample documents and complete usage examples.
 
 ## License
 

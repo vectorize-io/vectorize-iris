@@ -1,6 +1,6 @@
 # Vectorize Iris Node.js SDK
 
-**AI-powered document text extraction for Node.js & TypeScript**
+**Document text extraction for Node.js & TypeScript**
 
 Extract text, tables, and structured data from PDFs, images, and documents with a single async function. Built on Vectorize Iris, the industry-leading AI extraction service.
 
