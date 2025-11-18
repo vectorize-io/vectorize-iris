@@ -30,14 +30,24 @@ Use the `release.sh` script to easily release any component.
 
 ## Prerequisites
 
-Before you can create releases, you need to set up the following secrets in your GitHub repository:
+Before you can create releases, you need to configure the following:
 
-### 1. PyPI Token (for Python releases)
+### 1. PyPI Trusted Publishing (for Python releases)
 
-1. Go to https://pypi.org/manage/account/token/
-2. Create a new API token with upload permissions
-3. In your GitHub repository, go to Settings > Secrets and variables > Actions
-4. Create a new secret named `PYPI_API_TOKEN` and paste the token
+PyPI uses **Trusted Publishing** (OIDC), which requires no tokens or passwords:
+
+1. Go to https://pypi.org/manage/account/publishing/ (or create the project first via manual upload)
+2. Add a new "pending publisher" for your package:
+   - **PyPI Project Name**: `vectorize-iris`
+   - **Owner**: Your GitHub username or org (e.g., `vectorize-io`)
+   - **Repository name**: `vectorize-iris`
+   - **Workflow name**: `release.yml`
+   - **Environment name**: (leave blank)
+3. Save the publisher
+
+**Note**: If the package doesn't exist on PyPI yet, you'll need to do a one-time manual upload first, then configure Trusted Publishing in the project settings.
+
+For more info: https://docs.pypi.org/trusted-publishers/
 
 ### 2. npm Token (for Node.js releases)
 
@@ -169,9 +179,11 @@ If the automated workflow fails, you can manually release individual components:
 # Update version in python-api/pyproject.toml first
 cd python-api
 python -m build
+
+# Manual upload (requires PyPI credentials)
 python -m twine upload dist/*
 
-# Create and push tag
+# Or just create and push the tag to trigger automated release
 git tag py-0.1.0
 git push origin py-0.1.0
 ```
