@@ -11,6 +11,7 @@ Documentation: [docs.vectorize.io](https://docs.vectorize.io/build-deploy/extrac
 
 Traditional OCR tools struggle with complex layouts, poor scans, and structured data. **Iris uses advanced AI** to understand document structure and context, delivering:
 
+- 📄 **Universal format support** - Works with all unstructured document types (PDFs, images, scans, and more)
 - ✨ **High accuracy** - Handles poor quality scans and complex layouts
 - 📊 **Structure preservation** - Maintains tables, lists, and formatting
 - 🎯 **Smart chunking** - Semantic splitting for RAG pipelines
@@ -87,12 +88,17 @@ Split documents into semantic chunks perfect for RAG pipelines:
 - Preserves context across chunks
 
 ### Metadata Extraction
-Extract structured data using natural language:
+Extract structured data using JSON schemas (OpenAPI spec format recommended):
 ```python
 result = extract_text_from_file('invoice.pdf', options=ExtractionOptions(
     metadata_schemas=[{
         'id': 'invoice-data',
-        'schema': 'Extract: invoice_number, date, total_amount, vendor_name'
+        'schema': {
+            'invoice_number': 'string',
+            'date': 'string',
+            'total_amount': 'number',
+            'vendor_name': 'string'
+        }
     }]
 ))
 # Returns structured JSON metadata
@@ -143,23 +149,7 @@ Tables, lists, and other elements are properly extracted.
 Download and extract files directly from HTTP/HTTPS URLs:
 
 ```bash
-vectorize-iris https://example.com/document.pdf
-```
-
-**Output:**
-```
-🚀 Downloading file from URL
-──────────────────────────────────────────────────
-
-✓ Downloaded 2.1 MB to temporary file
-
-✨ Vectorize Iris Extraction
-──────────────────────────────────────────────────
-
-✓ Upload prepared
-✓ File uploaded successfully
-✓ Extraction started
-✓ Extraction completed in 8s
+vectorize-iris https://arxiv.org/pdf/2206.01062
 ```
 
 ### JSON Output (for piping)
@@ -271,6 +261,31 @@ Splits documents at semantic boundaries, perfect for RAG pipelines.
 ```bash
 vectorize-iris report.pdf --parsing-instructions "Extract only tables and numerical data, ignore narrative text"
 ```
+
+### Document Classification
+
+Pass multiple metadata schemas and Iris will automatically classify which schema matches best:
+
+```bash
+vectorize-iris invoice.pdf \
+  --metadata-schema 'invoice:{"invoice_number":"string","date":"string","total_amount":"number","vendor":"string"}' \
+  --metadata-schema 'receipt:{"store_name":"string","date":"string","items":"array","total":"number"}' \
+  --metadata-schema 'contract:{"parties":"array","effective_date":"string","terms":"string"}' \
+  --metadata-schema 'cv:{"name":"string","contact_info":"object","skills":"array","experience":"array"}' \
+  -o json
+```
+
+**Output:**
+```json
+{
+  "success": true,
+  "text": "...",
+  "metadata": "{\"invoice_number\":\"INV-2024-001\",\"date\":\"2024-01-15\",\"total_amount\":1250.00,\"vendor\":\"Acme Corp\"}",
+  "metadataSchema": "invoice"
+}
+```
+
+Iris automatically detected this was an invoice and extracted the relevant fields using the matching schema.
 
 ### Advanced Options
 

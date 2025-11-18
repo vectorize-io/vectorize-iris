@@ -301,13 +301,17 @@ import type {
   MetadataExtractionStrategySchema
 } from '@vectorize-io/iris';
 
-// Type-safe options
+// Type-safe options with structured schema (OpenAPI spec format)
 const options: ExtractionOptions = {
   chunkSize: 512,
   parsingInstructions: 'Extract code blocks',
   metadataSchemas: [{
     id: 'doc-meta',
-    schema: 'Extract: title, author, date'
+    schema: {
+      title: 'string',
+      author: 'string',
+      date: 'string'
+    }
   }],
   pollInterval: 2000,
   timeout: 300000

@@ -53,11 +53,11 @@ struct Cli {
     #[arg(long)]
     chunk_size: Option<u32>,
 
-    /// Metadata schema (format: id:schema, can be repeated)
-    #[arg(long = "metadata-schema", value_name = "ID:SCHEMA")]
+    /// Metadata schema (format: id:JSON_VALUE, can be repeated). JSON_VALUE must be valid JSON and will be wrapped in a 'document' key if not already wrapped. When provided, infer-metadata-schema is automatically set to false.
+    #[arg(long = "metadata-schema", value_name = "ID:JSON")]
     metadata_schemas: Vec<String>,
 
-    /// Infer metadata schema automatically (default: true)
+    /// Infer metadata schema automatically (default: true, automatically false if --metadata-schema is provided)
     #[arg(long, default_value = "true", action = clap::ArgAction::Set)]
     infer_metadata_schema: bool,
 
@@ -72,6 +72,10 @@ struct Cli {
     /// Maximum seconds to wait for extraction
     #[arg(long, default_value = "300")]
     timeout: u64,
+
+    /// Show detailed request/response information
+    #[arg(long, short = 'v')]
+    verbose: bool,
 }
 
 #[derive(Clone, ValueEnum)]
@@ -221,6 +225,7 @@ fn process_directory(
     parsing_instructions: Option<String>,
     poll_interval: u64,
     timeout: u64,
+    verbose: bool,
 ) -> Result<()> {
     eprintln!();
     eprintln!("{} {}", PACKAGE, style("Processing Directory").cyan().bold());
@@ -278,6 +283,7 @@ fn process_directory(
             parsing_instructions.clone(),
             poll_interval,
             timeout,
+            verbose,
         ) {
             Ok(result) => {
                 // Determine output file path
@@ -331,6 +337,7 @@ fn extract_text(
     parsing_instructions: Option<String>,
     poll_interval: u64,
     timeout: u64,
+    verbose: bool,
 ) -> Result<ExtractionResultData> {
     let multi = MultiProgress::new();
 
@@ -369,24 +376,46 @@ fn extract_text(
         content_type: "application/octet-stream".to_string(),
     };
 
-    let upload_response = client
-        .post(format!("{}/files", base_url))
+    let request_body = serde_json::to_string_pretty(&upload_request).unwrap();
+    let request_url = format!("{}/files", base_url);
+
+    let request_builder = client
+        .post(&request_url)
         .header("Authorization", format!("Bearer {}", api_token))
         .header("Content-Type", "application/json")
-        .json(&upload_request)
+        .json(&upload_request);
+
+    if verbose {
+        let headers = request_builder.try_clone()
+            .unwrap()
+            .build()?
+            .headers()
+            .clone();
+        log_request("POST", &request_url, &headers, Some(&request_body));
+    }
+
+    let upload_response = request_builder
         .send()
         .context("Failed to start upload")?;
 
-    if !upload_response.status().is_success() {
+    let response_status = upload_response.status();
+    let response_headers = upload_response.headers().clone();
+    let response_text = upload_response.text()?;
+
+    if verbose {
+        log_response(&response_status, &response_headers, &response_text);
+    }
+
+    if !response_status.is_success() {
         upload_spinner.finish_with_message(format!("{} Upload failed", CROSS));
         return Err(anyhow!(
             "Failed to start upload: {} - {}",
-            upload_response.status(),
-            upload_response.text().unwrap_or_default()
+            response_status,
+            response_text
         ));
     }
 
-    let upload_data: StartUploadResponse = upload_response.json()?;
+    let upload_data: StartUploadResponse = serde_json::from_str(&response_text)?;
     upload_spinner.finish_with_message(format!("{} Upload prepared", CHECK));
 
     // Step 2: Upload file
@@ -394,20 +423,39 @@ fn extract_text(
 
     let file_content = fs::read(file_path)?;
 
-    let put_response = client
+    let put_request_builder = client
         .put(&upload_data.upload_url)
         .header("Content-Type", "application/octet-stream")
         .header("Content-Length", file_size.to_string())
-        .body(file_content)
+        .body(file_content);
+
+    if verbose {
+        let headers = put_request_builder.try_clone()
+            .unwrap()
+            .build()?
+            .headers()
+            .clone();
+        log_request("PUT", &upload_data.upload_url, &headers, Some(&format!("<binary data: {} bytes>", file_size)));
+    }
+
+    let put_response = put_request_builder
         .send()
         .context("Failed to upload file")?;
 
-    if !put_response.status().is_success() {
+    let put_status = put_response.status();
+    let put_headers = put_response.headers().clone();
+    let put_text = put_response.text()?;
+
+    if verbose {
+        log_response(&put_status, &put_headers, &put_text);
+    }
+
+    if !put_status.is_success() {
         file_spinner.finish_with_message(format!("{} File upload failed", CROSS));
         return Err(anyhow!(
             "Failed to upload file: {} - {}",
-            put_response.status(),
-            put_response.text().unwrap_or_default()
+            put_status,
+            put_text
         ));
     }
 
@@ -423,11 +471,30 @@ fn extract_text(
             .map(|s| {
                 let parts: Vec<&str> = s.splitn(2, ':').collect();
                 if parts.len() != 2 {
-                    return Err(anyhow!("Invalid metadata schema format: {}. Expected ID:SCHEMA", s));
+                    return Err(anyhow!("Invalid metadata schema format: {}. Expected ID:JSON", s));
                 }
+
+                let id = parts[0].to_string();
+                let value_str = parts[1];
+
+                // Parse as JSON to validate
+                let json_value: serde_json::Value = serde_json::from_str(value_str)
+                    .context(format!("Invalid JSON in metadata schema '{}': {}", id, value_str))?;
+
+                // Check if it's already wrapped in a 'document' key
+                let schema_value = if json_value.is_object() && json_value.get("document").is_some() {
+                    // Already wrapped, use as-is
+                    json_value
+                } else {
+                    // Wrap in 'document' key
+                    serde_json::json!({
+                        "document": json_value
+                    })
+                };
+
                 Ok(MetadataSchema {
-                    id: parts[0].to_string(),
-                    schema: parts[1].to_string(),
+                    id,
+                    schema: schema_value.to_string(),
                 })
             })
             .collect();
@@ -454,24 +521,46 @@ fn extract_text(
         parsing_instructions,
     };
 
-    let extraction_response = client
-        .post(format!("{}/extraction", base_url))
+    let extraction_body = serde_json::to_string_pretty(&extraction_request).unwrap();
+    let extraction_url = format!("{}/extraction", base_url);
+
+    let extraction_request_builder = client
+        .post(&extraction_url)
         .header("Authorization", format!("Bearer {}", api_token))
         .header("Content-Type", "application/json")
-        .json(&extraction_request)
+        .json(&extraction_request);
+
+    if verbose {
+        let headers = extraction_request_builder.try_clone()
+            .unwrap()
+            .build()?
+            .headers()
+            .clone();
+        log_request("POST", &extraction_url, &headers, Some(&extraction_body));
+    }
+
+    let extraction_response = extraction_request_builder
         .send()
         .context("Failed to start extraction")?;
 
-    if !extraction_response.status().is_success() {
+    let extraction_status = extraction_response.status();
+    let extraction_headers = extraction_response.headers().clone();
+    let extraction_text = extraction_response.text()?;
+
+    if verbose {
+        log_response(&extraction_status, &extraction_headers, &extraction_text);
+    }
+
+    if !extraction_status.is_success() {
         extract_spinner.finish_with_message(format!("{} Extraction failed to start", CROSS));
         return Err(anyhow!(
             "Failed to start extraction: {} - {}",
-            extraction_response.status(),
-            extraction_response.text().unwrap_or_default()
+            extraction_status,
+            extraction_text
         ));
     }
 
-    let extraction_data: StartExtractionResponse = extraction_response.json()?;
+    let extraction_data: StartExtractionResponse = serde_json::from_str(&extraction_text)?;
     extract_spinner.finish_with_message(format!("{} Extraction started", CHECK));
 
     // Step 4: Poll for completion
@@ -497,22 +586,42 @@ fn extract_text(
             poll_count
         ));
 
-        let status_response = client
-            .get(format!("{}/extraction/{}", base_url, extraction_data.extraction_id))
-            .header("Authorization", format!("Bearer {}", api_token))
+        let status_url = format!("{}/extraction/{}", base_url, extraction_data.extraction_id);
+        let status_request_builder = client
+            .get(&status_url)
+            .header("Authorization", format!("Bearer {}", api_token));
+
+        if verbose {
+            let headers = status_request_builder.try_clone()
+                .unwrap()
+                .build()?
+                .headers()
+                .clone();
+            log_request("GET", &status_url, &headers, None);
+        }
+
+        let status_response = status_request_builder
             .send()
             .context("Failed to check status")?;
 
-        if !status_response.status().is_success() {
+        let status_response_status = status_response.status();
+        let status_response_headers = status_response.headers().clone();
+        let status_response_text = status_response.text()?;
+
+        if verbose {
+            log_response(&status_response_status, &status_response_headers, &status_response_text);
+        }
+
+        if !status_response_status.is_success() {
             poll_spinner.finish_with_message(format!("{} Status check failed", CROSS));
             return Err(anyhow!(
                 "Failed to check status: {} - {}",
-                status_response.status(),
-                status_response.text().unwrap_or_default()
+                status_response_status,
+                status_response_text
             ));
         }
 
-        let result: ExtractionResult = status_response.json()?;
+        let result: ExtractionResult = serde_json::from_str(&status_response_text)?;
 
         if result.ready {
             poll_spinner.finish_with_message(format!("{} Extraction completed in {}s", CHECK, elapsed));
@@ -543,6 +652,56 @@ fn format_bytes(bytes: u64) -> String {
     }
 
     format!("{:.1} {}", size, UNITS[unit_idx])
+}
+
+fn log_request(method: &str, url: &str, headers: &reqwest::header::HeaderMap, body: Option<&str>) {
+    eprintln!();
+    eprintln!("{}", style("━".repeat(70)).dim());
+    eprintln!("{} {} {}", style("→").cyan().bold(), style(method).green().bold(), style(url).yellow());
+    eprintln!("{}", style("━".repeat(70)).dim());
+    eprintln!();
+    eprintln!("{}", style("Headers:").cyan().bold());
+    for (key, value) in headers.iter() {
+        let value_str = if key == "authorization" {
+            "Bearer ***REDACTED***".to_string()
+        } else {
+            value.to_str().unwrap_or("<non-utf8>").to_string()
+        };
+        eprintln!("  {}: {}", style(key.as_str()).dim(), value_str);
+    }
+    if let Some(body_content) = body {
+        eprintln!();
+        eprintln!("{}", style("Body:").cyan().bold());
+        eprintln!("{}", body_content);
+    }
+    eprintln!();
+}
+
+fn log_response(status: &reqwest::StatusCode, headers: &reqwest::header::HeaderMap, body: &str) {
+    eprintln!("{}", style("━".repeat(70)).dim());
+    eprintln!("{} {} {}",
+        style("←").cyan().bold(),
+        if status.is_success() {
+            style("Response").green().bold()
+        } else {
+            style("Response").red().bold()
+        },
+        if status.is_success() {
+            style(status.as_str()).green()
+        } else {
+            style(status.as_str()).red()
+        }
+    );
+    eprintln!("{}", style("━".repeat(70)).dim());
+    eprintln!();
+    eprintln!("{}", style("Headers:").cyan().bold());
+    for (key, value) in headers.iter() {
+        eprintln!("  {}: {}", style(key.as_str()).dim(), value.to_str().unwrap_or("<non-utf8>"));
+    }
+    eprintln!();
+    eprintln!("{}", style("Body:").cyan().bold());
+    eprintln!("{}", body);
+    eprintln!();
 }
 
 fn print_section_header(title: &str, emoji: Emoji) {
@@ -706,6 +865,13 @@ fn main() -> Result<()> {
         .or_else(|| env::var("VECTORIZE_ORG_ID").ok())
         .context("Missing org ID. Set VECTORIZE_ORG_ID env var or use --org-id flag")?;
 
+    // Automatically set infer_metadata_schema to false if metadata schemas are provided
+    let infer_metadata_schema = if !cli.metadata_schemas.is_empty() {
+        false
+    } else {
+        cli.infer_metadata_schema
+    };
+
     // Handle URL, directory, or local file path
     let _temp_file; // Keep temp file alive until end of function
     let file_path: PathBuf = if is_url(&cli.file_path) {
@@ -726,15 +892,16 @@ fn main() -> Result<()> {
             cli.output_file.as_ref(),
             cli.chunk_size,
             cli.metadata_schemas,
-            cli.infer_metadata_schema,
+            infer_metadata_schema,
             cli.parsing_instructions,
             cli.poll_interval,
             cli.timeout,
+            cli.verbose,
         );
     }
 
     // Extract text from single file
-    let has_schemas = !cli.metadata_schemas.is_empty() || cli.infer_metadata_schema;
+    let has_schemas = !cli.metadata_schemas.is_empty() || infer_metadata_schema;
 
     let result = extract_text(
         &file_path,
@@ -742,10 +909,11 @@ fn main() -> Result<()> {
         &org_id,
         cli.chunk_size,
         cli.metadata_schemas,
-        cli.infer_metadata_schema,
+        infer_metadata_schema,
         cli.parsing_instructions,
         cli.poll_interval,
         cli.timeout,
+        cli.verbose,
     )?;
 
     // Format and print output

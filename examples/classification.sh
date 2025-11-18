@@ -1,0 +1,73 @@
+#!/bin/bash
+
+# Document Classification Example
+# This example shows how to use multiple metadata schemas to automatically
+# classify documents and extract relevant fields.
+
+echo "==================================================================="
+echo "Document Classification Example"
+echo "==================================================================="
+echo ""
+echo "When you pass multiple metadata schemas, Iris will automatically"
+echo "determine which schema best matches your document and extract"
+echo "fields accordingly."
+echo ""
+
+# Example 1: Single document classification
+echo "Example 1: Classifying a single document"
+echo "-----------------------------------------------------------------"
+echo ""
+echo "Command:"
+echo "  vectorize-iris document.pdf \\"
+echo "    --metadata-schema 'invoice:{\"invoice_number\":\"string\",\"date\":\"string\",\"total_amount\":\"number\",\"vendor\":\"string\"}' \\"
+echo "    --metadata-schema 'receipt:{\"store_name\":\"string\",\"date\":\"string\",\"items\":\"array\",\"total\":\"number\"}' \\"
+echo "    --metadata-schema 'contract:{\"parties\":\"array\",\"effective_date\":\"string\",\"terms\":\"string\"}' \\"
+echo "    -o json"
+echo ""
+echo "Expected output:"
+echo "{"
+echo "  \"success\": true,"
+echo "  \"text\": \"...\","
+echo "  \"metadata\": \"{\\\"invoice_number\\\":\\\"INV-2024-001\\\",\\\"date\\\":\\\"2024-01-15\\\",\\\"total_amount\\\":1250.00,\\\"vendor\\\":\\\"Acme Corp\\\"}\","
+echo "  \"metadataSchema\": \"invoice\""
+echo "}"
+echo ""
+echo "Note: The 'metadataSchema' field tells you which schema matched best."
+echo ""
+
+# Example 2: Batch classification of multiple documents
+echo "Example 2: Batch classification of multiple documents"
+echo "-----------------------------------------------------------------"
+echo ""
+echo "You can classify multiple documents at once:"
+echo ""
+echo "Command:"
+echo "  vectorize-iris ./documents \\"
+echo "    --metadata-schema 'invoice:{\"invoice_number\":\"string\",\"date\":\"string\",\"total_amount\":\"number\",\"vendor\":\"string\"}' \\"
+echo "    --metadata-schema 'receipt:{\"store_name\":\"string\",\"date\":\"string\",\"items\":\"array\",\"total\":\"number\"}' \\"
+echo "    --metadata-schema 'contract:{\"parties\":\"array\",\"effective_date\":\"string\",\"terms\":\"string\"}' \\"
+echo "    -o json -f ./output"
+echo ""
+echo "This will process all documents in the ./documents directory,"
+echo "classify each one, and save the results to ./output with the"
+echo "appropriate schema detected for each document."
+echo ""
+
+# Example 3: Using jq to filter by document type
+echo "Example 3: Using jq to filter classified documents"
+echo "-----------------------------------------------------------------"
+echo ""
+echo "You can pipe the JSON output to jq to filter by document type:"
+echo ""
+echo "Command:"
+echo "  vectorize-iris document.pdf \\"
+echo "    --metadata-schema 'invoice:{\"invoice_number\":\"string\",\"date\":\"string\",\"total_amount\":\"number\",\"vendor\":\"string\"}' \\"
+echo "    --metadata-schema 'receipt:{\"store_name\":\"string\",\"date\":\"string\",\"items\":\"array\",\"total\":\"number\"}' \\"
+echo "    -o json | jq 'select(.metadataSchema == \"invoice\")'"
+echo ""
+echo "This extracts only documents that were classified as invoices."
+echo ""
+
+echo "==================================================================="
+echo "Try it yourself!"
+echo "==================================================================="
