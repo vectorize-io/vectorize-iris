@@ -1,5 +1,5 @@
 use anyhow::{Context, Result, anyhow};
-use clap::{Parser, ValueEnum};
+use clap::{Parser, Subcommand, ValueEnum};
 use console::{style, Emoji};
 use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
 use reqwest::blocking::Client;
@@ -11,6 +11,7 @@ use std::thread;
 use std::time::Duration;
 use textwrap::{wrap, Options};
 use tempfile::NamedTempFile;
+use std::io::{self, Write};
 
 // Emojis for beautiful output
 static SPARKLE: Emoji = Emoji("✨", "");
@@ -29,17 +30,24 @@ static CHART: Emoji = Emoji("📊", "=");
 #[command(about = "Extract text from files using Vectorize Iris", long_about = None)]
 #[command(version)]
 struct Cli {
-    /// Path or URL to the file to extract text from
-    #[arg(value_name = "FILE")]
-    file_path: String,
+    #[command(subcommand)]
+    command: Option<Commands>,
 
-    /// API token (defaults to VECTORIZE_API_TOKEN env var)
-    #[arg(long)]
+    /// Path or URL to the file to extract text from (used when no subcommand is provided)
+    #[arg(value_name = "FILE")]
+    file_path: Option<String>,
+
+    /// API token (defaults to config file, then VECTORIZE_API_TOKEN env var)
+    #[arg(long, global = true)]
     api_token: Option<String>,
 
-    /// Organization ID (defaults to VECTORIZE_ORG_ID env var)
-    #[arg(long)]
+    /// Organization ID (defaults to config file, then VECTORIZE_ORG_ID env var)
+    #[arg(long, global = true)]
     org_id: Option<String>,
+
+    /// API URL (defaults to config file, then https://api.vectorize.io)
+    #[arg(long, global = true, hide = true)]
+    api_url: Option<String>,
 
     /// Output format (pretty: styled output, json: JSON format, yaml: YAML format, text: plain text only)
     #[arg(short = 'o', long, value_enum, default_value = "pretty")]
@@ -76,6 +84,24 @@ struct Cli {
     /// Show detailed request/response information
     #[arg(long, short = 'v')]
     verbose: bool,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Configure API credentials (saves to ~/.vectorize-iris/credentials)
+    Configure {
+        /// Use manual configuration (prompt for credentials instead of browser)
+        #[arg(long)]
+        manual: bool,
+
+        /// API token (for non-interactive configuration)
+        #[arg(long)]
+        api_token: Option<String>,
+
+        /// Organization ID (for non-interactive configuration)
+        #[arg(long)]
+        org_id: Option<String>,
+    },
 }
 
 #[derive(Clone, ValueEnum)]
@@ -215,6 +241,7 @@ fn download_url(url: &str) -> Result<NamedTempFile> {
 
 fn process_directory(
     dir_path: &PathBuf,
+    api_base_url: &str,
     api_token: &str,
     org_id: &str,
     output_format: &OutputFormat,
@@ -275,6 +302,7 @@ fn process_directory(
 
         match extract_text(
             &file_path,
+            api_base_url,
             api_token,
             org_id,
             chunk_size,
@@ -329,6 +357,7 @@ fn process_directory(
 
 fn extract_text(
     file_path: &PathBuf,
+    api_base_url: &str,
     api_token: &str,
     org_id: &str,
     chunk_size: Option<u32>,
@@ -352,7 +381,7 @@ fn extract_text(
         return Err(anyhow!("File not found: {}", file_path.display()));
     }
 
-    let base_url = format!("https://api.vectorize.io/v1/org/{}", org_id);
+    let base_url = format!("{}/v1/org/{}", api_base_url, org_id);
     let client = Client::new();
 
     let file_name = file_path
@@ -851,19 +880,412 @@ fn format_output(data: &ExtractionResultData, format: &OutputFormat, has_schemas
     Ok(())
 }
 
+// Configuration management
+fn get_config_dir() -> Result<PathBuf> {
+    let home_dir = dirs::home_dir()
+        .context("Could not determine home directory")?;
+    Ok(home_dir.join(".vectorize-iris"))
+}
+
+fn get_credentials_path() -> Result<PathBuf> {
+    Ok(get_config_dir()?.join("credentials"))
+}
+
+fn read_credentials() -> Result<(Option<String>, Option<String>, Option<String>)> {
+    let creds_path = get_credentials_path()?;
+
+    if !creds_path.exists() {
+        return Ok((None, None, None));
+    }
+
+    let content = fs::read_to_string(&creds_path)
+        .context("Failed to read credentials file")?;
+
+    let mut api_token = None;
+    let mut org_id = None;
+    let mut api_url = None;
+    let mut in_default_section = false;
+
+    for line in content.lines() {
+        let line = line.trim();
+
+        if line == "[default]" {
+            in_default_section = true;
+            continue;
+        }
+
+        if line.starts_with('[') {
+            in_default_section = false;
+            continue;
+        }
+
+        if in_default_section && line.contains('=') {
+            let parts: Vec<&str> = line.splitn(2, '=').collect();
+            if parts.len() == 2 {
+                let key = parts[0].trim();
+                let value = parts[1].trim();
+
+                match key {
+                    "api_token" => api_token = Some(value.to_string()),
+                    "org_id" => org_id = Some(value.to_string()),
+                    "api_url" => api_url = Some(value.to_string()),
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    Ok((api_token, org_id, api_url))
+}
+
+fn write_credentials(api_token: &str, org_id: &str) -> Result<()> {
+    let config_dir = get_config_dir()?;
+    let creds_path = get_credentials_path()?;
+
+    // Create config directory if it doesn't exist
+    if !config_dir.exists() {
+        fs::create_dir_all(&config_dir)
+            .context("Failed to create config directory")?;
+    }
+
+    let content = format!(
+        "[default]\napi_token = {}\norg_id = {}\n",
+        api_token, org_id
+    );
+
+    fs::write(&creds_path, content)
+        .context("Failed to write credentials file")?;
+
+    // Set restrictive permissions on the credentials file (Unix only)
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(&creds_path)?.permissions();
+        perms.set_mode(0o600);
+        fs::set_permissions(&creds_path, perms)?;
+    }
+
+    Ok(())
+}
+
+fn configure_manual() -> Result<()> {
+    eprintln!();
+    eprintln!("{} {}", SPARKLE, style("Vectorize Iris Configuration").cyan().bold());
+    eprintln!("{}", style("─".repeat(50)).dim());
+    eprintln!();
+    eprintln!("This will configure your Vectorize Iris credentials.");
+    eprintln!();
+    eprintln!("Get your credentials at:");
+    eprintln!("  {}", style("https://platform.vectorize.io/").cyan().underlined());
+    eprintln!("  → Go to your account → {} → {}",
+        style("Org Settings").yellow(),
+        style("Access Tokens").yellow()
+    );
+    eprintln!();
+
+    // Prompt for API token
+    eprint!("API Token: ");
+    io::stdout().flush()?;
+    let mut api_token = String::new();
+    io::stdin().read_line(&mut api_token)?;
+    let api_token = api_token.trim();
+
+    if api_token.is_empty() {
+        return Err(anyhow!("API token cannot be empty"));
+    }
+
+    // Prompt for Org ID
+    eprint!("Organization ID: ");
+    io::stdout().flush()?;
+    let mut org_id = String::new();
+    io::stdin().read_line(&mut org_id)?;
+    let org_id = org_id.trim();
+
+    if org_id.is_empty() {
+        return Err(anyhow!("Organization ID cannot be empty"));
+    }
+
+    // Write credentials
+    write_credentials(api_token, org_id)?;
+
+    let creds_path = get_credentials_path()?;
+    eprintln!();
+    eprintln!("{} Configuration saved to: {}", CHECK, style(creds_path.display()).cyan());
+    eprintln!();
+
+    Ok(())
+}
+
+fn configure_browser() -> Result<()> {
+    use std::net::TcpListener;
+
+    eprintln!();
+    eprintln!("{} {}", SPARKLE, style("Vectorize Iris Configuration").cyan().bold());
+    eprintln!("{}", style("─".repeat(50)).dim());
+    eprintln!();
+
+    // Start local server
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .context("Failed to start local server")?;
+    let port = listener.local_addr()?.port();
+    let callback_url = format!("http://localhost:{}", port);
+
+    // Get platform base URL (hidden env var for testing)
+    let platform_url = env::var("VECTORIZE_PLATFORM_URL")
+        .unwrap_or_else(|_| "https://platform.vectorize.io".to_string());
+
+    // Construct auth URL
+    let auth_url = format!(
+        "{}/authorize-client?client={}&callback={}",
+        platform_url,
+        urlencoding::encode("Vectorize Iris"),
+        urlencoding::encode(&callback_url)
+    );
+
+    eprintln!("{} Opening browser for authentication...", ROCKET);
+    eprintln!();
+    eprintln!("If the browser doesn't open automatically, visit:");
+    eprintln!("  {}", style(&auth_url).cyan().underlined());
+    eprintln!();
+    eprintln!("{} Waiting for authentication...", HOURGLASS);
+    eprintln!();
+
+    // Open browser
+    if let Err(e) = open::that(&auth_url) {
+        eprintln!("{} Warning: Could not open browser automatically: {}",
+            style("⚠").yellow(), e);
+        eprintln!("Please visit the URL above manually.");
+        eprintln!();
+    }
+
+    // Wait for callback with timeout
+    listener.set_nonblocking(false)?;
+
+    // Accept connection
+    let (stream, _) = listener.accept()
+        .context("Failed to receive callback from browser")?;
+
+    // Parse callback
+    let (api_token, org_id) = parse_callback(stream)?;
+
+    // Write credentials
+    write_credentials(&api_token, &org_id)?;
+
+    let creds_path = get_credentials_path()?;
+    eprintln!("{} Configuration saved to: {}", CHECK, style(creds_path.display()).cyan());
+    eprintln!();
+
+    Ok(())
+}
+
+fn parse_callback(stream: std::net::TcpStream) -> Result<(String, String)> {
+    use std::io::{Read, BufRead, BufReader};
+
+    let mut buf_reader = BufReader::new(&stream);
+
+    // Read request line
+    let mut request_line = String::new();
+    buf_reader.read_line(&mut request_line)?;
+
+    // Parse POST request: POST / HTTP/1.1
+    let parts: Vec<&str> = request_line.split_whitespace().collect();
+    if parts.len() < 2 || parts[0] != "POST" {
+        return Err(anyhow!("Expected POST request, got: {}", request_line));
+    }
+
+    // Read headers to find Content-Length
+    let mut content_length = 0;
+    let mut line = String::new();
+    loop {
+        line.clear();
+        buf_reader.read_line(&mut line)?;
+
+        if line == "\r\n" || line == "\n" {
+            // End of headers
+            break;
+        }
+
+        // Parse Content-Length header
+        if line.to_lowercase().starts_with("content-length:") {
+            let len_str = line.split(':').nth(1)
+                .context("Invalid Content-Length header")?
+                .trim();
+            content_length = len_str.parse::<usize>()
+                .context("Failed to parse Content-Length")?;
+        }
+    }
+
+    // Read body
+    let mut body = vec![0; content_length];
+    buf_reader.read_exact(&mut body)?;
+    let body_str = String::from_utf8(body)
+        .context("Invalid UTF-8 in request body")?;
+
+    // Parse form data (application/x-www-form-urlencoded)
+    // Expected format: accessToken=xxx&orgId=yyy
+    let mut access_token = None;
+    let mut org_id = None;
+
+    for param in body_str.split('&') {
+        let mut kv = param.splitn(2, '=');
+        let key = kv.next().context("Missing parameter key")?;
+        let value = kv.next().context("Missing parameter value")?;
+
+        let decoded_value = urlencoding::decode(value)
+            .context("Failed to decode parameter")?
+            .into_owned();
+
+        match key {
+            "accessToken" => access_token = Some(decoded_value),
+            "orgId" => org_id = Some(decoded_value),
+            _ => {}
+        }
+    }
+
+    let access_token = access_token.context("Missing 'accessToken' parameter")?;
+    let org_id = org_id.context("Missing 'orgId' parameter")?;
+
+    // Send success response to browser
+    let response = "HTTP/1.1 200 OK\r\n\
+                    Content-Type: text/html\r\n\
+                    \r\n\
+                    <!DOCTYPE html>\
+                    <html>\
+                    <head>\
+                        <title>Configuration Complete</title>\
+                        <style>\
+                            * { margin: 0; padding: 0; box-sizing: border-box; }\
+                            body {\
+                                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;\
+                                display: flex;\
+                                justify-content: center;\
+                                align-items: center;\
+                                min-height: 100vh;\
+                                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\
+                                color: white;\
+                            }\
+                            .container {\
+                                text-align: center;\
+                                animation: fadeIn 0.5s ease-in;\
+                            }\
+                            .checkmark {\
+                                width: 80px;\
+                                height: 80px;\
+                                border-radius: 50%;\
+                                background: white;\
+                                margin: 0 auto 2rem;\
+                                display: flex;\
+                                align-items: center;\
+                                justify-content: center;\
+                                animation: scaleIn 0.5s ease-out;\
+                            }\
+                            .checkmark svg {\
+                                width: 50px;\
+                                height: 50px;\
+                                stroke: #10b981;\
+                                stroke-width: 3;\
+                                fill: none;\
+                                stroke-linecap: round;\
+                                stroke-dasharray: 50;\
+                                stroke-dashoffset: 50;\
+                                animation: drawCheck 0.5s 0.3s ease-out forwards;\
+                            }\
+                            h1 {\
+                                font-size: 2rem;\
+                                font-weight: 600;\
+                                margin-bottom: 1rem;\
+                            }\
+                            p {\
+                                font-size: 1.1rem;\
+                                opacity: 0.9;\
+                            }\
+                            @keyframes fadeIn {\
+                                from { opacity: 0; transform: translateY(20px); }\
+                                to { opacity: 1; transform: translateY(0); }\
+                            }\
+                            @keyframes scaleIn {\
+                                from { transform: scale(0); }\
+                                to { transform: scale(1); }\
+                            }\
+                            @keyframes drawCheck {\
+                                to { stroke-dashoffset: 0; }\
+                            }\
+                        </style>\
+                    </head>\
+                    <body>\
+                        <div class='container'>\
+                            <div class='checkmark'>\
+                                <svg viewBox='0 0 52 52'>\
+                                    <path d='M14 27l8 8 16-16'/>\
+                                </svg>\
+                            </div>\
+                            <h1>Configuration Complete!</h1>\
+                            <p id='message'>You can close this window</p>\
+                        </div>\
+                        <script>\
+                            // Try to auto-close the tab\
+                            setTimeout(() => {\
+                                window.close();\
+                                // If close didn't work, update message\
+                                setTimeout(() => {\
+                                    document.getElementById('message').textContent = \
+                                        'Please close this tab and return to your terminal';\
+                                }, 100);\
+                            }, 1500);\
+                        </script>\
+                    </body>\
+                    </html>";
+
+    let mut stream_mut = buf_reader.into_inner();
+    std::io::Write::write_all(&mut stream_mut, response.as_bytes())?;
+    std::io::Write::flush(&mut stream_mut)?;
+
+    Ok((access_token, org_id))
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    // Get credentials from args or environment
+    // Handle configure subcommand
+    if let Some(Commands::Configure { manual, api_token, org_id }) = cli.command {
+        if let (Some(token), Some(id)) = (api_token, org_id) {
+            // Non-interactive configuration with explicit credentials
+            write_credentials(&token, &id)?;
+            let creds_path = get_credentials_path()?;
+            eprintln!("{} Configuration saved to: {}", CHECK, style(creds_path.display()).cyan());
+            return Ok(());
+        } else if manual {
+            // Manual configuration (prompts for credentials)
+            return configure_manual();
+        } else {
+            // Browser-based configuration (default)
+            return configure_browser();
+        }
+    }
+
+    // Get file path (required for extraction)
+    let file_path_str = cli.file_path
+        .context("FILE argument is required for extraction. Use 'vectorize-iris configure' to set up credentials.")?;
+
+    // Get credentials in order: CLI args -> env vars -> config file
+    let (config_api_token, config_org_id, config_api_url) = read_credentials().unwrap_or((None, None, None));
+
     let api_token = cli.api_token
         .or_else(|| env::var("VECTORIZE_API_TOKEN").ok())
+        .or(config_api_token)
         .context(
-            "Missing API token. Set VECTORIZE_API_TOKEN env var or use --api-token flag",
+            "Missing API token. Set with 'vectorize-iris configure', VECTORIZE_API_TOKEN env var, or --api-token flag",
         )?;
 
     let org_id = cli.org_id
         .or_else(|| env::var("VECTORIZE_ORG_ID").ok())
-        .context("Missing org ID. Set VECTORIZE_ORG_ID env var or use --org-id flag")?;
+        .or(config_org_id)
+        .context("Missing org ID. Set with 'vectorize-iris configure', VECTORIZE_ORG_ID env var, or --org-id flag")?;
+
+    let api_base_url = cli.api_url
+        .or_else(|| env::var("VECTORIZE_API_URL").ok())
+        .or(config_api_url)
+        .unwrap_or_else(|| "https://api.vectorize.io".to_string());
 
     // Automatically set infer_metadata_schema to false if metadata schemas are provided
     let infer_metadata_schema = if !cli.metadata_schemas.is_empty() {
@@ -874,11 +1296,11 @@ fn main() -> Result<()> {
 
     // Handle URL, directory, or local file path
     let _temp_file; // Keep temp file alive until end of function
-    let file_path: PathBuf = if is_url(&cli.file_path) {
-        _temp_file = download_url(&cli.file_path)?;
+    let file_path: PathBuf = if is_url(&file_path_str) {
+        _temp_file = download_url(&file_path_str)?;
         _temp_file.path().to_path_buf()
     } else {
-        PathBuf::from(&cli.file_path)
+        PathBuf::from(&file_path_str)
     };
 
     // Check if input is a directory
@@ -886,6 +1308,7 @@ fn main() -> Result<()> {
         // Process all files in directory
         return process_directory(
             &file_path,
+            &api_base_url,
             &api_token,
             &org_id,
             &cli.output,
@@ -905,6 +1328,7 @@ fn main() -> Result<()> {
 
     let result = extract_text(
         &file_path,
+        &api_base_url,
         &api_token,
         &org_id,
         cli.chunk_size,
