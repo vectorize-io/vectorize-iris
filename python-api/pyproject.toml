@@ -1,6 +1,6 @@
 [project]
 name = "vectorize-iris"
-version = "0.0.1"
+version = "0.0.2"
 description = "Simple text extraction from files using Vectorize Iris"
 readme = "README.md"
 requires-python = ">=3.8"
