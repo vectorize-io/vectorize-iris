@@ -1,8 +1,6 @@
 # Vectorize Iris
 
-**Extract text from any document with AI-powered precision.**
-
-Vectorize Iris is an advanced document extraction service that uses AI to accurately extract text, structure, and metadata from PDFs, images, and other document formats. Unlike traditional OCR tools, Iris understands document structure, preserves formatting, and can extract specific information using natural language instructions.
+Vectorize Iris is a model-based extraction solution that transforms how RAG systems handle PDFs. It combines extraction and chunking into one streamlined process, making it easier than ever to get clean, usable text from complex documents.
 
 Documentation: [docs.vectorize.io](https://docs.vectorize.io/build-deploy/extract-information/extraction-tester/#vectorize-iris)
 
