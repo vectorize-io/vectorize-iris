@@ -60,7 +60,7 @@ export interface ExtractionResult {
 // Options for extract functions
 
 export interface ExtractionOptions {
-  /** Vectorize API token (defaults to VECTORIZE_API_TOKEN env var) */
+  /** Vectorize API token (defaults to VECTORIZE_TOKEN env var) */
   apiToken?: string;
   /** Organization ID (defaults to VECTORIZE_ORG_ID env var) */
   orgId?: string;

@@ -37,7 +37,7 @@ struct Cli {
     #[arg(value_name = "FILE")]
     file_path: Option<String>,
 
-    /// API token (defaults to config file, then VECTORIZE_API_TOKEN env var)
+    /// API token (defaults to config file, then VECTORIZE_TOKEN env var)
     #[arg(long, global = true)]
     api_token: Option<String>,
 
@@ -1271,10 +1271,10 @@ fn main() -> Result<()> {
     let (config_api_token, config_org_id, config_api_url) = read_credentials().unwrap_or((None, None, None));
 
     let api_token = cli.api_token
-        .or_else(|| env::var("VECTORIZE_API_TOKEN").ok())
+        .or_else(|| env::var("VECTORIZE_TOKEN").ok())
         .or(config_api_token)
         .context(
-            "Missing API token. Set with 'vectorize-iris configure', VECTORIZE_API_TOKEN env var, or --api-token flag",
+            "Missing API token. Set with 'vectorize-iris configure', VECTORIZE_TOKEN env var, or --api-token flag",
         )?;
 
     let org_id = cli.org_id

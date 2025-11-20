@@ -140,7 +140,7 @@ def extract_text(
     Args:
         file_bytes: File content as bytes
         file_name: Name of the file (default: "document.pdf")
-        api_token: Vectorize API token (defaults to VECTORIZE_API_TOKEN env var)
+        api_token: Vectorize API token (defaults to VECTORIZE_TOKEN env var)
         org_id: Organization ID (defaults to VECTORIZE_ORG_ID env var)
         poll_interval: Seconds to wait between status checks (default: 2)
         timeout: Maximum seconds to wait for extraction (default: 300)
@@ -160,12 +160,12 @@ def extract_text(
         >>> print(result.chunks)  # If chunking was requested
     """
     # Get credentials from environment if not provided
-    api_token = api_token or os.getenv('VECTORIZE_API_TOKEN')
+    api_token = api_token or os.getenv('VECTORIZE_TOKEN')
     org_id = org_id or os.getenv('VECTORIZE_ORG_ID')
 
     if not api_token or not org_id:
         raise VectorizeIrisError(
-            "Missing credentials. Set VECTORIZE_API_TOKEN and VECTORIZE_ORG_ID "
+            "Missing credentials. Set VECTORIZE_TOKEN and VECTORIZE_ORG_ID "
             "environment variables or pass them as parameters."
         )
 
@@ -187,7 +187,7 @@ def extract_text_from_file(
 
     Args:
         file_path: Path to the file to extract text from
-        api_token: Vectorize API token (defaults to VECTORIZE_API_TOKEN env var)
+        api_token: Vectorize API token (defaults to VECTORIZE_TOKEN env var)
         org_id: Organization ID (defaults to VECTORIZE_ORG_ID env var)
         poll_interval: Seconds to wait between status checks (default: 2)
         timeout: Maximum seconds to wait for extraction (default: 300)
@@ -229,12 +229,12 @@ def extract_text_from_file(
         >>> print(result.metadata)  # JSON string
     """
     # Get credentials from environment if not provided
-    api_token = api_token or os.getenv('VECTORIZE_API_TOKEN')
+    api_token = api_token or os.getenv('VECTORIZE_TOKEN')
     org_id = org_id or os.getenv('VECTORIZE_ORG_ID')
 
     if not api_token or not org_id:
         raise VectorizeIrisError(
-            "Missing credentials. Set VECTORIZE_API_TOKEN and VECTORIZE_ORG_ID "
+            "Missing credentials. Set VECTORIZE_TOKEN and VECTORIZE_ORG_ID "
             "environment variables or pass them as parameters."
         )
 

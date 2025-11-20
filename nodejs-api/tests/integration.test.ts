@@ -9,7 +9,7 @@ import { extractText, extractTextFromFile, VectorizeIrisError } from '../src/ind
 import type { ExtractionOptions } from '../src/index';
 
 // Skip tests if credentials not available
-const hasCredentials = process.env.VECTORIZE_API_TOKEN && process.env.VECTORIZE_ORG_ID;
+const hasCredentials = process.env.VECTORIZE_TOKEN && process.env.VECTORIZE_ORG_ID;
 const describeIfCredentials = hasCredentials ? describe : describe.skip;
 
 const TEST_FILE = path.join(__dirname, '../../examples/sample.md');

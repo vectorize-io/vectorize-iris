@@ -35,7 +35,7 @@ pip install vectorize-iris
 Set your credentials (get them at [vectorize.io](https://vectorize.io)):
 
 ```bash
-export VECTORIZE_API_TOKEN="your-token"
+export VECTORIZE_TOKEN="your-token"
 export VECTORIZE_ORG_ID="your-org-id"
 ```
 

@@ -19,7 +19,7 @@ from vectorize_iris import (
 
 # Skip all tests if credentials are not available
 pytestmark = pytest.mark.skipif(
-    not os.getenv("VECTORIZE_API_TOKEN") or not os.getenv("VECTORIZE_ORG_ID"),
+    not os.getenv("VECTORIZE_TOKEN") or not os.getenv("VECTORIZE_ORG_ID"),
     reason="API credentials not found"
 )
 

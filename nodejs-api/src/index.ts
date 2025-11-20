@@ -193,7 +193,7 @@ export async function extractText(
   options: ExtractionOptions = {}
 ): Promise<ExtractionResultData> {
   const {
-    apiToken = process.env.VECTORIZE_API_TOKEN,
+    apiToken = process.env.VECTORIZE_TOKEN,
     orgId = process.env.VECTORIZE_ORG_ID,
     pollInterval = 2000,
     timeout = 300000,
@@ -204,7 +204,7 @@ export async function extractText(
   // Validate credentials
   if (!apiToken || !orgId) {
     throw new VectorizeIrisError(
-      'Missing credentials. Set VECTORIZE_API_TOKEN and VECTORIZE_ORG_ID ' +
+      'Missing credentials. Set VECTORIZE_TOKEN and VECTORIZE_ORG_ID ' +
       'environment variables or pass them in options.'
     );
   }
@@ -260,7 +260,7 @@ export async function extractTextFromFile(
   options: ExtractionOptions = {}
 ): Promise<ExtractionResultData> {
   const {
-    apiToken = process.env.VECTORIZE_API_TOKEN,
+    apiToken = process.env.VECTORIZE_TOKEN,
     orgId = process.env.VECTORIZE_ORG_ID,
     pollInterval = 2000,
     timeout = 300000,
@@ -271,7 +271,7 @@ export async function extractTextFromFile(
   // Validate credentials
   if (!apiToken || !orgId) {
     throw new VectorizeIrisError(
-      'Missing credentials. Set VECTORIZE_API_TOKEN and VECTORIZE_ORG_ID ' +
+      'Missing credentials. Set VECTORIZE_TOKEN and VECTORIZE_ORG_ID ' +
       'environment variables or pass them in options.'
     );
   }

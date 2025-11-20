@@ -18,7 +18,7 @@ describe('extractText', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Reset environment variables
-    delete process.env.VECTORIZE_API_TOKEN;
+    delete process.env.VECTORIZE_TOKEN;
     delete process.env.VECTORIZE_ORG_ID;
   });
 
@@ -28,7 +28,7 @@ describe('extractText', () => {
   });
 
   it('should throw error when file does not exist', async () => {
-    process.env.VECTORIZE_API_TOKEN = 'test-token';
+    process.env.VECTORIZE_TOKEN = 'test-token';
     process.env.VECTORIZE_ORG_ID = 'test-org';
 
     mockFs.access.mockRejectedValueOnce(new Error('File not found'));
@@ -37,7 +37,7 @@ describe('extractText', () => {
   });
 
   it('should successfully extract text from a file', async () => {
-    process.env.VECTORIZE_API_TOKEN = 'test-token';
+    process.env.VECTORIZE_TOKEN = 'test-token';
     process.env.VECTORIZE_ORG_ID = 'test-org';
 
     // Mock file operations
@@ -101,7 +101,7 @@ describe('extractText', () => {
   });
 
   it('should handle upload failure', async () => {
-    process.env.VECTORIZE_API_TOKEN = 'test-token';
+    process.env.VECTORIZE_TOKEN = 'test-token';
     process.env.VECTORIZE_ORG_ID = 'test-org';
 
     mockFs.access.mockResolvedValueOnce(undefined);
@@ -120,7 +120,7 @@ describe('extractText', () => {
   });
 
   it('should handle file upload failure', async () => {
-    process.env.VECTORIZE_API_TOKEN = 'test-token';
+    process.env.VECTORIZE_TOKEN = 'test-token';
     process.env.VECTORIZE_ORG_ID = 'test-org';
 
     mockFs.access.mockResolvedValueOnce(undefined);
@@ -150,7 +150,7 @@ describe('extractText', () => {
   });
 
   it('should handle extraction failure', async () => {
-    process.env.VECTORIZE_API_TOKEN = 'test-token';
+    process.env.VECTORIZE_TOKEN = 'test-token';
     process.env.VECTORIZE_ORG_ID = 'test-org';
 
     mockFs.access.mockResolvedValueOnce(undefined);
@@ -198,7 +198,7 @@ describe('extractText', () => {
   });
 
   it('should handle extraction timeout', async () => {
-    process.env.VECTORIZE_API_TOKEN = 'test-token';
+    process.env.VECTORIZE_TOKEN = 'test-token';
     process.env.VECTORIZE_ORG_ID = 'test-org';
 
     mockFs.access.mockResolvedValueOnce(undefined);

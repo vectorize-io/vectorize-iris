@@ -145,7 +145,7 @@ async def extract_text_async(
     Args:
         file_bytes: File content as bytes
         file_name: Name of the file (default: "document.pdf")
-        api_token: Vectorize API token (defaults to VECTORIZE_API_TOKEN env var)
+        api_token: Vectorize API token (defaults to VECTORIZE_TOKEN env var)
         org_id: Organization ID (defaults to VECTORIZE_ORG_ID env var)
         poll_interval: Seconds to wait between status checks (default: 2)
         timeout: Maximum seconds to wait for extraction (default: 300)
@@ -158,12 +158,12 @@ async def extract_text_async(
         VectorizeIrisError: If extraction fails or times out
     """
     # Get credentials from environment if not provided
-    api_token = api_token or os.getenv('VECTORIZE_API_TOKEN')
+    api_token = api_token or os.getenv('VECTORIZE_TOKEN')
     org_id = org_id or os.getenv('VECTORIZE_ORG_ID')
 
     if not api_token or not org_id:
         raise VectorizeIrisError(
-            "Missing credentials. Set VECTORIZE_API_TOKEN and VECTORIZE_ORG_ID "
+            "Missing credentials. Set VECTORIZE_TOKEN and VECTORIZE_ORG_ID "
             "environment variables or pass them as parameters."
         )
 
@@ -185,7 +185,7 @@ async def extract_text_from_file_async(
 
     Args:
         file_path: Path to the file to extract text from
-        api_token: Vectorize API token (defaults to VECTORIZE_API_TOKEN env var)
+        api_token: Vectorize API token (defaults to VECTORIZE_TOKEN env var)
         org_id: Organization ID (defaults to VECTORIZE_ORG_ID env var)
         poll_interval: Seconds to wait between status checks (default: 2)
         timeout: Maximum seconds to wait for extraction (default: 300)
@@ -199,12 +199,12 @@ async def extract_text_from_file_async(
         FileNotFoundError: If the file doesn't exist
     """
     # Get credentials from environment if not provided
-    api_token = api_token or os.getenv('VECTORIZE_API_TOKEN')
+    api_token = api_token or os.getenv('VECTORIZE_TOKEN')
     org_id = org_id or os.getenv('VECTORIZE_ORG_ID')
 
     if not api_token or not org_id:
         raise VectorizeIrisError(
-            "Missing credentials. Set VECTORIZE_API_TOKEN and VECTORIZE_ORG_ID "
+            "Missing credentials. Set VECTORIZE_TOKEN and VECTORIZE_ORG_ID "
             "environment variables or pass them as parameters."
         )
 

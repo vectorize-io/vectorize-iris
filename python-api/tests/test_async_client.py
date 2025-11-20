@@ -15,7 +15,7 @@ from vectorize_iris import extract_text_async, VectorizeIrisError
 def mock_env():
     """Set up mock environment variables"""
     with patch.dict(os.environ, {
-        'VECTORIZE_API_TOKEN': 'test-token',
+        'VECTORIZE_TOKEN': 'test-token',
         'VECTORIZE_ORG_ID': 'test-org-id'
     }):
         yield

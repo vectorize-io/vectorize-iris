@@ -310,7 +310,7 @@ vectorize-iris large-document.pdf \
 Set your API credentials:
 
 ```bash
-export VECTORIZE_API_TOKEN="your-token"
+export VECTORIZE_TOKEN="your-token"
 export VECTORIZE_ORG_ID="your-org-id"
 ```
 
