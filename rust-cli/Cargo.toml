@@ -1,6 +1,6 @@
 [package]
 name = "vectorize-iris"
-version = "0.0.4"
+version = "0.0.5"
 edition = "2021"
 authors = ["Vectorize"]
 description = "CLI tool for extracting text from files using Vectorize Iris"
