@@ -307,14 +307,84 @@ vectorize-iris large-document.pdf \
 
 ## Configuration
 
-Set your API credentials:
+### CLI Configuration
+
+The CLI offers multiple ways to configure your credentials:
+
+#### Interactive Configuration (Recommended)
+
+The easiest way to get started - opens your browser for authentication:
+
+```bash
+vectorize-iris configure
+```
+
+**What happens:**
+1. Opens your browser to the Vectorize platform
+2. Click "Authorize" to grant access
+3. Credentials are automatically saved to `~/.vectorize-iris/credentials`
+4. Done! You're ready to extract
+
+#### Manual Configuration
+
+If you prefer not to use the browser, prompt for credentials manually:
+
+```bash
+vectorize-iris configure --manual
+```
+
+You'll be asked to enter:
+- API Token
+- Organization ID
+
+Get these from [platform.vectorize.io](https://platform.vectorize.io) → Account → Org Settings → Access Tokens
+
+#### Non-Interactive Configuration
+
+For scripts and automation, pass credentials directly:
+
+```bash
+vectorize-iris configure --api-token "your-token" --org-id "your-org-id"
+```
+
+#### Environment Variables
+
+Alternatively, set credentials via environment variables (works for all clients):
 
 ```bash
 export VECTORIZE_TOKEN="your-token"
 export VECTORIZE_ORG_ID="your-org-id"
 ```
 
-Get your credentials at [Vectorize Console](https://vectorize.io).
+### Python & Node.js Configuration
+
+For Python and Node.js clients, use environment variables or pass credentials programmatically:
+
+**Environment variables:**
+```bash
+export VECTORIZE_TOKEN="your-token"
+export VECTORIZE_ORG_ID="your-org-id"
+```
+
+**Python:**
+```python
+from vectorize_iris import VectorizeIrisClient
+
+client = VectorizeIrisClient(
+    api_token="your-token",
+    org_id="your-org-id"
+)
+```
+
+**Node.js:**
+```typescript
+import { extractTextFromFile } from '@vectorize-io/iris';
+
+const result = await extractTextFromFile('document.pdf', {
+    apiToken: 'your-token',
+    orgId: 'your-org-id'
+});
+```
 
 ## Documentation
 

@@ -114,6 +114,12 @@ enum OutputFormat {
 
 // Request/Response Models
 
+#[derive(Deserialize, Serialize)]
+struct UsageInfo {
+    #[serde(rename = "irisPages")]
+    iris_pages: u32,
+}
+
 #[derive(Serialize)]
 struct StartUploadRequest {
     name: String,
@@ -178,6 +184,8 @@ struct ExtractionResultData {
     chunks_metadata: Option<Vec<Option<String>>>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "chunksSchema")]
     chunks_schema: Option<Vec<Option<String>>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    usage: Option<UsageInfo>,
     #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<String>,
 }
@@ -862,6 +870,18 @@ fn format_output(data: &ExtractionResultData, format: &OutputFormat, has_schemas
                 );
                 println!();
                 print_wrapped_text(text, 0);
+            }
+
+            // Show usage information if available
+            if let Some(usage) = &data.usage {
+                println!();
+                println!("{}", style("─".repeat(60)).dim());
+                println!("{} {}", CHART, style("Usage Information").cyan().bold());
+                println!();
+                println!("  {} Iris Pages: {}",
+                    style("📄").dim(),
+                    style(usage.iris_pages).cyan().bold()
+                );
             }
 
             println!();

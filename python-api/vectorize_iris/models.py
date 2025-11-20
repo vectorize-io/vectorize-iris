@@ -65,6 +65,13 @@ class StartExtractionResponse(BaseModel):
     extraction_id: str = Field(..., alias="extractionId", description="Unique identifier for the extraction job")
 
 
+class UsageInfo(BaseModel):
+    """Usage information for the extraction"""
+    model_config = ConfigDict(populate_by_name=True)
+
+    iris_pages: int = Field(..., alias="irisPages", description="Number of pages processed by Iris")
+
+
 class ExtractionResultData(BaseModel):
     """Data contained in extraction result"""
     model_config = ConfigDict(populate_by_name=True, extra='allow')
@@ -84,6 +91,7 @@ class ExtractionResultData(BaseModel):
         alias="chunksSchema",
         description="Schema IDs used for each chunk's metadata"
     )
+    usage: Optional[UsageInfo] = Field(default=None, description="Usage information")
     error: Optional[str] = Field(default=None, description="Error message if extraction failed")
 
 

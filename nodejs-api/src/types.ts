@@ -41,6 +41,10 @@ export interface StartExtractionResponse {
   extractionId: string;
 }
 
+export interface UsageInfo {
+  irisPages: number;
+}
+
 export interface ExtractionResultData {
   success: boolean;
   chunks?: string[];
@@ -49,6 +53,7 @@ export interface ExtractionResultData {
   metadataSchema?: string;
   chunksMetadata?: (string | null)[];  // JSON strings, may contain nulls
   chunksSchema?: (string | null)[];  // May contain nulls
+  usage?: UsageInfo;
   error?: string;
 }
 
