@@ -52,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/node-')
     permissions:
-      id-token: write  # Required for trusted publishing (provenance)
+      id-token: write  # Required for OIDC trusted publishing
       contents: read
     steps:
       - uses: actions/checkout@v4
@@ -60,7 +60,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'  # Node 22+ includes npm >= 11.5.1 required for OIDC
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
@@ -73,10 +73,10 @@ jobs:
           cd nodejs-api
           npm run build
 
-      - name: Publish to npm
+      - name: Publish to npm (OIDC trusted publishing)
         run: |
           cd nodejs-api
-          npm publish --access public --provenance
+          npm publish --access public
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
