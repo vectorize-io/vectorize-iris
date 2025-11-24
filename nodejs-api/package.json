@@ -2,6 +2,10 @@
   "name": "@vectorize-io/iris",
   "version": "0.1.2",
   "description": "Simple text extraction from files using Vectorize Iris",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vectorize-io/vectorize-iris"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
