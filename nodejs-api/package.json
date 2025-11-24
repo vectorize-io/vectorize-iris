@@ -1,6 +1,6 @@
 {
   "name": "@vectorize-io/iris",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Simple text extraction from files using Vectorize Iris",
   "repository": {
     "type": "git",
