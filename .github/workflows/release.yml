@@ -60,8 +60,14 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'  # Node 22+ includes npm >= 11.5.1 required for OIDC
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
+
+      - name: Upgrade npm for OIDC support
+        run: npm install -g npm@latest  # npm >= 11.5.1 required for OIDC
+
+      - name: Verify npm version
+        run: npm --version
 
       - name: Install dependencies
         run: |
