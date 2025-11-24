@@ -35,10 +35,18 @@ echo -e "${YELLOW}  Testing Python API${NC}"
 echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 cd python-api
 
-# Run Python integration tests
-echo "Running Python integration tests..."
 if command -v uv &> /dev/null; then
-    uv run pytest tests/test_integration.py -v -s
+    # Run Python unit tests (in parallel)
+    echo "Running Python unit tests..."
+    uv run pytest tests/test_models.py -v -n auto
+
+    # Run Python integration tests (in parallel)
+    if [ -n "$VECTORIZE_TOKEN" ] && [ -n "$VECTORIZE_ORG_ID" ]; then
+        echo -e "\n${BLUE}Running Python integration tests...${NC}"
+        VECTORIZE_TOKEN="$VECTORIZE_TOKEN" VECTORIZE_ORG_ID="$VECTORIZE_ORG_ID" uv run pytest tests/test_integration.py -v -s -n auto
+    else
+        echo -e "${YELLOW}⚠ Skipping Python integration tests (no credentials)${NC}"
+    fi
 else
     echo -e "${RED}✗ uv not found. Install with: curl -LsSf https://astral.sh/uv/install.sh | sh${NC}"
     exit 1
@@ -60,10 +68,23 @@ if [ ! -d "node_modules" ]; then
     npm install > /dev/null 2>&1
 fi
 
-echo -e "${YELLOW}⚠ Skipping TypeScript Jest tests (ESM module configuration issue)${NC}"
-echo -e "${BLUE}Note: TypeScript API works correctly, Jest configuration needs ESM support${NC}"
+# Build TypeScript
+echo "Building TypeScript..."
+npm run build > /dev/null 2>&1
 
-echo -e "${GREEN}✓ Node.js/TypeScript API build successful${NC}"
+# Run Node.js unit tests
+echo "Running Node.js unit tests..."
+npm test -- tests/types.test.ts
+
+# Run Node.js integration tests (if credentials are available)
+if [ -n "$VECTORIZE_TOKEN" ] && [ -n "$VECTORIZE_ORG_ID" ]; then
+    echo -e "\n${BLUE}Running Node.js integration tests...${NC}"
+    VECTORIZE_TOKEN="$VECTORIZE_TOKEN" VECTORIZE_ORG_ID="$VECTORIZE_ORG_ID" npm test -- tests/integration.test.ts
+else
+    echo -e "${YELLOW}⚠ Skipping Node.js integration tests (no credentials)${NC}"
+fi
+
+echo -e "${GREEN}✓ Node.js/TypeScript API tests passed${NC}"
 cd ..
 echo
 
@@ -133,9 +154,23 @@ else
     echo -e "${YELLOW}  ⚠ jq not found, skipping chunk validation${NC}"
 fi
 
-# Test 5: With metadata extraction (skip due to known API issue)
+# Test 5: With metadata extraction
 echo "Test 5: With metadata extraction..."
-echo -e "${YELLOW}  ⚠ Skipping metadata test (known backend parsing issue)${NC}"
+./target/release/vectorize-iris ../examples/sample.md --metadata-schema 'doc-info:{"title":"string","summary":"string"}' -o json > /tmp/output_metadata.json
+if command -v jq &> /dev/null; then
+    if jq -e '.success' /tmp/output_metadata.json > /dev/null 2>&1; then
+        echo -e "${GREEN}  ✓ Metadata extraction test passed${NC}"
+        METADATA=$(jq -r '.metadata // "null"' /tmp/output_metadata.json)
+        if [ "$METADATA" != "null" ]; then
+            echo -e "${BLUE}    Metadata: ${METADATA:0:100}...${NC}"
+        fi
+    else
+        echo -e "${RED}  ✗ Metadata extraction test failed${NC}"
+        exit 1
+    fi
+else
+    echo -e "${YELLOW}  ⚠ jq not found, skipping metadata validation${NC}"
+fi
 
 # Cleanup
 rm -f /tmp/output_*.txt /tmp/output_*.json /tmp/output_*.yaml

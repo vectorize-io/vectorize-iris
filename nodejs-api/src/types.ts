@@ -11,7 +11,8 @@ export interface StartFileUploadRequest {
 
 export interface MetadataExtractionStrategySchema {
   id: string;
-  schema: string;
+  /** Schema definition - can be a JSON string or an object (will be converted to JSON string) */
+  schema: string | Record<string, unknown>;
 }
 
 export interface MetadataExtractionStrategy {
@@ -65,7 +66,7 @@ export interface ExtractionResult {
 // Options for extract functions
 
 export interface ExtractionOptions {
-  /** Vectorize API token (defaults to VECTORIZE_TOKEN env var) */
+  /** Vectorize access token (defaults to VECTORIZE_TOKEN env var) */
   apiToken?: string;
   /** Organization ID (defaults to VECTORIZE_ORG_ID env var) */
   orgId?: string;

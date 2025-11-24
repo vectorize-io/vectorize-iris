@@ -73,9 +73,26 @@ class TestSyncIntegration:
         print(f"\n✓ Generated {len(result.chunks)} chunks")
 
     def test_extract_with_metadata(self):
-        """Test extraction with metadata schemas"""
-        # Skip this test for now - metadata extraction has API issues
-        pytest.skip("Metadata extraction has backend parsing issues")
+        """Test extraction with metadata schemas using dict format"""
+        options = ExtractionOptions(
+            metadata_schemas=[{
+                'id': 'doc-info',
+                'schema': {
+                    'title': 'string',
+                    'summary': 'string',
+                    'main_topics': ['string']
+                }
+            }]
+        )
+
+        result = extract_text_from_file(
+            str(get_test_file()),
+            options=options
+        )
+
+        assert result.success is True
+        # Metadata may or may not be present depending on document
+        print(f"\n✓ Metadata: {result.metadata}")
 
     def test_extract_with_infer_metadata(self):
         """Test extraction with inferred metadata schema"""

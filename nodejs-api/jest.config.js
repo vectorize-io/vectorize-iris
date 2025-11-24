@@ -16,13 +16,4 @@ module.exports = {
       }
     }]
   },
-  transformIgnorePatterns: [
-    'node_modules/(?!(node-fetch)/)',
-  ],
-  extensionsToTreatAsEsm: ['.ts'],
-  globals: {
-    'ts-jest': {
-      useESM: true,
-    },
-  },
 };

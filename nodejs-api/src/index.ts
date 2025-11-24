@@ -99,8 +99,13 @@ async function _extractFromBuffer(
   // Add metadata (default inferSchema to true)
   const inferSchema = options.inferMetadataSchema !== undefined ? options.inferMetadataSchema : true;
   if (options.metadataSchemas || inferSchema) {
+    // Convert schema objects to JSON strings if needed
+    const normalizedSchemas = options.metadataSchemas?.map(s => ({
+      id: s.id,
+      schema: typeof s.schema === 'string' ? s.schema : JSON.stringify(s.schema)
+    }));
     extractionRequest.metadata = {
-      schemas: options.metadataSchemas,
+      schemas: normalizedSchemas,
       inferSchema: inferSchema
     };
   }

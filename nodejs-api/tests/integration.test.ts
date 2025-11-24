@@ -27,7 +27,6 @@ describeIfCredentials('Integration Tests', () => {
 
     it('should extract with chunking', async () => {
       const options: ExtractionOptions = {
-        chunkingStrategy: 'markdown',
         chunkSize: 512
       };
 
@@ -79,7 +78,6 @@ describeIfCredentials('Integration Tests', () => {
 
     it('should extract with all options', async () => {
       const options: ExtractionOptions = {
-        chunkingStrategy: 'markdown',
         chunkSize: 256,
         metadataSchemas: [
           {
@@ -121,7 +119,6 @@ describeIfCredentials('Integration Tests', () => {
       const fileName = path.basename(TEST_FILE);
 
       const options: ExtractionOptions = {
-        chunkingStrategy: 'markdown',
         chunkSize: 512
       };
 

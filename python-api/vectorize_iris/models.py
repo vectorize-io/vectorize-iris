@@ -2,8 +2,9 @@
 Pydantic models for Vectorize Iris API
 """
 
-from typing import Optional, List, Literal
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Optional, List, Literal, Union, Dict, Any
+from pydantic import BaseModel, Field, ConfigDict, field_validator
+import json
 
 
 # Request Models
@@ -21,7 +22,15 @@ class MetadataExtractionStrategySchema(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     id: str = Field(..., description="Schema identifier")
-    schema_: str = Field(..., alias="schema", description="Schema definition for metadata extraction")
+    schema_: str = Field(..., alias="schema", description="Schema definition for metadata extraction (JSON string or dict)")
+
+    @field_validator('schema_', mode='before')
+    @classmethod
+    def convert_schema_to_string(cls, v: Union[str, Dict[str, Any]]) -> str:
+        """Convert dict schema to JSON string if needed"""
+        if isinstance(v, dict):
+            return json.dumps(v)
+        return v
 
 
 class MetadataExtractionStrategy(BaseModel):
@@ -109,10 +118,24 @@ class ExtractionOptions(BaseModel):
     """Options for text extraction"""
     type: Optional[Literal["iris"]] = Field(default="iris", description="Extraction type")
     chunk_size: Optional[int] = Field(default=None, description="Size of each chunk (default: 256)")
-    metadata_schemas: Optional[List[MetadataExtractionStrategySchema]] = Field(
+    metadata_schemas: Optional[List[Union[MetadataExtractionStrategySchema, Dict[str, Any]]]] = Field(
         default=None,
-        description="Metadata extraction schemas"
+        description="Metadata extraction schemas (can be MetadataExtractionStrategySchema objects or dicts with 'id' and 'schema' keys)"
     )
+
+    @field_validator('metadata_schemas', mode='before')
+    @classmethod
+    def convert_metadata_schemas(cls, v: Optional[List[Any]]) -> Optional[List[MetadataExtractionStrategySchema]]:
+        """Convert dict schemas to MetadataExtractionStrategySchema objects"""
+        if v is None:
+            return None
+        result = []
+        for item in v:
+            if isinstance(item, dict):
+                result.append(MetadataExtractionStrategySchema(**item))
+            else:
+                result.append(item)
+        return result
     infer_metadata_schema: Optional[bool] = Field(
         default=True,
         description="Whether to automatically infer metadata schema (default: True)"

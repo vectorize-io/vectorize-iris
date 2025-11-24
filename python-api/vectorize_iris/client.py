@@ -140,7 +140,7 @@ def extract_text(
     Args:
         file_bytes: File content as bytes
         file_name: Name of the file (default: "document.pdf")
-        api_token: Vectorize API token (defaults to VECTORIZE_TOKEN env var)
+        api_token: Vectorize access token (defaults to VECTORIZE_TOKEN env var)
         org_id: Organization ID (defaults to VECTORIZE_ORG_ID env var)
         poll_interval: Seconds to wait between status checks (default: 2)
         timeout: Maximum seconds to wait for extraction (default: 300)
@@ -187,7 +187,7 @@ def extract_text_from_file(
 
     Args:
         file_path: Path to the file to extract text from
-        api_token: Vectorize API token (defaults to VECTORIZE_TOKEN env var)
+        api_token: Vectorize access token (defaults to VECTORIZE_TOKEN env var)
         org_id: Organization ID (defaults to VECTORIZE_ORG_ID env var)
         poll_interval: Seconds to wait between status checks (default: 2)
         timeout: Maximum seconds to wait for extraction (default: 300)

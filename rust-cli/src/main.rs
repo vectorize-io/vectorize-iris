@@ -37,7 +37,7 @@ struct Cli {
     #[arg(value_name = "FILE")]
     file_path: Option<String>,
 
-    /// API token (defaults to config file, then VECTORIZE_TOKEN env var)
+    /// Access token (defaults to config file, then VECTORIZE_TOKEN env var)
     #[arg(long, global = true)]
     api_token: Option<String>,
 
@@ -94,7 +94,7 @@ enum Commands {
         #[arg(long)]
         manual: bool,
 
-        /// API token (for non-interactive configuration)
+        /// Access token (for non-interactive configuration)
         #[arg(long)]
         api_token: Option<String>,
 
@@ -1003,15 +1003,15 @@ fn configure_manual() -> Result<()> {
     );
     eprintln!();
 
-    // Prompt for API token
-    eprint!("API Token: ");
+    // Prompt for access token
+    eprint!("Access Token: ");
     io::stdout().flush()?;
     let mut api_token = String::new();
     io::stdin().read_line(&mut api_token)?;
     let api_token = api_token.trim();
 
     if api_token.is_empty() {
-        return Err(anyhow!("API token cannot be empty"));
+        return Err(anyhow!("Access token cannot be empty"));
     }
 
     // Prompt for Org ID
@@ -1294,7 +1294,7 @@ fn main() -> Result<()> {
         .or_else(|| env::var("VECTORIZE_TOKEN").ok())
         .or(config_api_token)
         .context(
-            "Missing API token. Set with 'vectorize-iris configure', VECTORIZE_TOKEN env var, or --api-token flag",
+            "Missing access token. Set with 'vectorize-iris configure', VECTORIZE_TOKEN env var, or --api-token flag",
         )?;
 
     let org_id = cli.org_id

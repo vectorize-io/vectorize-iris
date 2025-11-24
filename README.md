@@ -8,6 +8,33 @@ Vectorize Iris is a model-based extraction solution that transforms how RAG syst
 
 Documentation: [docs.vectorize.io](https://docs.vectorize.io/build-deploy/extract-information/extraction-tester/#vectorize-iris)
 
+## Table of Contents
+
+- [Why Iris?](#why-iris)
+- [Quick Start](#quick-start)
+- [Installation](#installation)
+- [Features](#features)
+  - [Basic Text Extraction](#basic-text-extraction)
+  - [Smart Chunking](#smart-chunking)
+  - [Metadata Extraction](#metadata-extraction)
+  - [Parsing Instructions](#parsing-instructions)
+- [CLI Examples](#cli-examples)
+  - [Basic Extraction](#basic-extraction)
+  - [Extract from URL](#extract-from-url)
+  - [JSON Output](#json-output-for-piping)
+  - [Plain Text Output](#plain-text-output)
+  - [Save to File](#save-to-file)
+  - [Process Directory](#process-directory)
+  - [Chunking for RAG](#chunking-for-rag)
+  - [Custom Parsing Instructions](#custom-parsing-instructions)
+  - [Document Classification](#document-classification)
+  - [Advanced Options](#advanced-options)
+- [Configuration](#configuration)
+  - [CLI Configuration](#cli-configuration)
+  - [Python & Node.js Configuration](#python--nodejs-configuration)
+- [Documentation](#documentation)
+- [License](#license)
+- [Support](#support)
 
 ## Why Iris?
 
@@ -334,7 +361,7 @@ vectorize-iris configure --manual
 ```
 
 You'll be asked to enter:
-- API Token
+- Access Token
 - Organization ID
 
 Get these from [platform.vectorize.io](https://platform.vectorize.io) → Account → Org Settings → Access Tokens
