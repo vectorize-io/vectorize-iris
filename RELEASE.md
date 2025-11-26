@@ -146,7 +146,7 @@ npm install vectorize-iris
 
 ### Rust CLI (via install script)
 ```bash
-curl -fsSL https://raw.githubusercontent.com/vectorize-io/vectorize-iris/refs/heads/main/install.sh | sh
+curl -fsSL https://get-iris.vectorize.io | sh
 ```
 
 Or download binaries directly from the [GitHub Releases page](https://github.com/YOUR_USERNAME/vectorize-iris/releases).
