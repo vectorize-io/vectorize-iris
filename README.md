@@ -117,20 +117,49 @@ Split documents into semantic chunks perfect for RAG pipelines:
 - Preserves context across chunks
 
 ### Metadata Extraction
-Extract structured data using JSON schemas (OpenAPI spec format recommended):
+Extract structured data using JSON Schema.
+
+Each `schema` must be an object with a top-level `document` key wrapping the JSON
+Schema. Without that wrapper the extraction fails with
+`IllegalArgumentException: Document schema is missing`.
+
 ```python
 result = extract_text_from_file('invoice.pdf', options=ExtractionOptions(
     metadata_schemas=[{
         'id': 'invoice-data',
         'schema': {
-            'invoice_number': 'string',
-            'date': 'string',
-            'total_amount': 'number',
-            'vendor_name': 'string'
+            'document': {
+                'type': 'object',
+                'properties': {
+                    'invoice_number': {'type': 'string', 'description': 'Invoice reference number'},
+                    'date':           {'type': 'string', 'description': 'Invoice date as printed'},
+                    'total_amount':   {'type': 'number', 'description': 'Total amount due'},
+                    'vendor_name':    {'type': 'string', 'description': 'Name of the vendor'}
+                },
+                'required': []
+            }
         }
-    }]
+    }],
+    infer_metadata_schema=False
 ))
 # Returns structured JSON metadata
+```
+
+Give every property a `type` and a `description` — both materially improve
+extraction accuracy.
+
+Set `infer_metadata_schema=False` when you supply your own schemas, so no schema
+is generated and yours are used as-is. Leave it `True` (the default) to have a
+schema inferred from the document instead.
+
+You may optionally add a sibling `sections` key for per-chunk metadata; omit it
+for document-level extraction only:
+
+```python
+'schema': {
+    'document': { ... },
+    'sections': {'line-items': { ... }}
+}
 ```
 
 ### Parsing Instructions
