@@ -305,18 +305,28 @@ import type {
   MetadataExtractionStrategySchema
 } from '@vectorize-io/iris';
 
-// Type-safe options with structured schema (OpenAPI spec format)
+// Type-safe options with a JSON Schema.
+// NOTE: `schema` must wrap the JSON Schema in a top-level `document` key.
+// Without it the extraction fails with
+// "IllegalArgumentException: Document schema is missing".
 const options: ExtractionOptions = {
   chunkSize: 512,
   parsingInstructions: 'Extract code blocks',
   metadataSchemas: [{
     id: 'doc-meta',
     schema: {
-      title: 'string',
-      author: 'string',
-      date: 'string'
+      document: {
+        type: 'object',
+        properties: {
+          title:  { type: 'string', description: 'Document title' },
+          author: { type: 'string', description: 'Author name' },
+          date:   { type: 'string', description: 'Publication date as printed' }
+        },
+        required: []
+      }
     }
   }],
+  inferMetadataSchema: false,
   pollInterval: 2000,
   timeout: 300000
 };
