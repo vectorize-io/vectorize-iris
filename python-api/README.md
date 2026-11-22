@@ -39,6 +39,19 @@ export VECTORIZE_TOKEN="your-token"
 export VECTORIZE_ORG_ID="your-org-id"
 ```
 
+### Hindsight Inference
+
+Iris also runs on [Hindsight Inference](https://inference.hindsight.vectorize.io). The API is the same;
+point the SDK at its base URL and use a Hindsight Inference API key. No organization ID is needed (the
+key identifies it):
+
+```bash
+export VECTORIZE_IRIS_BASE_URL="https://inference.hindsight.vectorize.io/v1"
+export VECTORIZE_TOKEN="hsk_..."   # your Hindsight Inference API key
+```
+
+Or per call: `extract_text_from_file("document.pdf", api_token="hsk_...", base_url="https://inference.hindsight.vectorize.io/v1")`.
+
 ### Basic Usage
 
 ```python

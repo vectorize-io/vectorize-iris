@@ -49,6 +49,12 @@ struct Cli {
     #[arg(long, global = true, hide = true)]
     api_url: Option<String>,
 
+    /// API root that /files and /extraction hang off, used as given; no org ID needed.
+    /// For Hindsight Inference: https://inference.hindsight.vectorize.io/v1
+    /// (defaults to VECTORIZE_IRIS_BASE_URL env var, then config file base_url)
+    #[arg(long, global = true)]
+    base_url: Option<String>,
+
     /// Output format (pretty: styled output, json: JSON format, yaml: YAML format, text: plain text only)
     #[arg(short = 'o', long, value_enum, default_value = "pretty")]
     output: OutputFormat,
@@ -249,9 +255,8 @@ fn download_url(url: &str) -> Result<NamedTempFile> {
 
 fn process_directory(
     dir_path: &PathBuf,
-    api_base_url: &str,
+    base_url: &str,
     api_token: &str,
-    org_id: &str,
     output_format: &OutputFormat,
     output_dir: Option<&PathBuf>,
     chunk_size: Option<u32>,
@@ -310,9 +315,8 @@ fn process_directory(
 
         match extract_text(
             &file_path,
-            api_base_url,
+            base_url,
             api_token,
-            org_id,
             chunk_size,
             metadata_schemas.clone(),
             infer_metadata_schema,
@@ -365,9 +369,8 @@ fn process_directory(
 
 fn extract_text(
     file_path: &PathBuf,
-    api_base_url: &str,
+    base_url: &str,
     api_token: &str,
-    org_id: &str,
     chunk_size: Option<u32>,
     metadata_schemas: Vec<String>,
     infer_metadata_schema: bool,
@@ -389,7 +392,6 @@ fn extract_text(
         return Err(anyhow!("File not found: {}", file_path.display()));
     }
 
-    let base_url = format!("{}/v1/org/{}", api_base_url, org_id);
     let client = Client::new();
 
     let file_name = file_path
@@ -911,11 +913,11 @@ fn get_credentials_path() -> Result<PathBuf> {
     Ok(get_config_dir()?.join("credentials"))
 }
 
-fn read_credentials() -> Result<(Option<String>, Option<String>, Option<String>)> {
+fn read_credentials() -> Result<(Option<String>, Option<String>, Option<String>, Option<String>)> {
     let creds_path = get_credentials_path()?;
 
     if !creds_path.exists() {
-        return Ok((None, None, None));
+        return Ok((None, None, None, None));
     }
 
     let content = fs::read_to_string(&creds_path)
@@ -924,6 +926,7 @@ fn read_credentials() -> Result<(Option<String>, Option<String>, Option<String>)
     let mut api_token = None;
     let mut org_id = None;
     let mut api_url = None;
+    let mut base_url = None;
     let mut in_default_section = false;
 
     for line in content.lines() {
@@ -949,13 +952,14 @@ fn read_credentials() -> Result<(Option<String>, Option<String>, Option<String>)
                     "api_token" => api_token = Some(value.to_string()),
                     "org_id" => org_id = Some(value.to_string()),
                     "api_url" => api_url = Some(value.to_string()),
+                    "base_url" => base_url = Some(value.to_string()),
                     _ => {}
                 }
             }
         }
     }
 
-    Ok((api_token, org_id, api_url))
+    Ok((api_token, org_id, api_url, base_url))
 }
 
 fn write_credentials(api_token: &str, org_id: &str) -> Result<()> {
@@ -1263,6 +1267,25 @@ fn parse_callback(stream: std::net::TcpStream) -> Result<(String, String)> {
     Ok((access_token, org_id))
 }
 
+/// The API root requests go to. A base URL is used as given and needs no org ID (Hindsight
+/// Inference takes the organization from the key); otherwise `{api_url}/v1/org/{org_id}`, with
+/// api_url defaulting to https://api.vectorize.io.
+fn resolve_base_url(
+    base_url: Option<String>,
+    api_url: Option<String>,
+    org_id: Option<String>,
+) -> Result<String> {
+    if let Some(base) = base_url.filter(|b| !b.trim().is_empty()) {
+        return Ok(base.trim().trim_end_matches('/').to_string());
+    }
+    let org_id = org_id.context(
+        "Missing org ID. Set with 'vectorize-iris configure', VECTORIZE_ORG_ID env var, or --org-id flag \
+         (or set a base URL with --base-url or VECTORIZE_IRIS_BASE_URL)",
+    )?;
+    let api_url = api_url.unwrap_or_else(|| "https://api.vectorize.io".to_string());
+    Ok(format!("{}/v1/org/{}", api_url.trim_end_matches('/'), org_id))
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
@@ -1288,7 +1311,8 @@ fn main() -> Result<()> {
         .context("FILE argument is required for extraction. Use 'vectorize-iris configure' to set up credentials.")?;
 
     // Get credentials in order: CLI args -> env vars -> config file
-    let (config_api_token, config_org_id, config_api_url) = read_credentials().unwrap_or((None, None, None));
+    let (config_api_token, config_org_id, config_api_url, config_base_url) =
+        read_credentials().unwrap_or((None, None, None, None));
 
     let api_token = cli.api_token
         .or_else(|| env::var("VECTORIZE_TOKEN").ok())
@@ -1297,15 +1321,17 @@ fn main() -> Result<()> {
             "Missing access token. Set with 'vectorize-iris configure', VECTORIZE_TOKEN env var, or --api-token flag",
         )?;
 
-    let org_id = cli.org_id
-        .or_else(|| env::var("VECTORIZE_ORG_ID").ok())
-        .or(config_org_id)
-        .context("Missing org ID. Set with 'vectorize-iris configure', VECTORIZE_ORG_ID env var, or --org-id flag")?;
-
-    let api_base_url = cli.api_url
-        .or_else(|| env::var("VECTORIZE_API_URL").ok())
-        .or(config_api_url)
-        .unwrap_or_else(|| "https://api.vectorize.io".to_string());
+    let base_url = resolve_base_url(
+        cli.base_url
+            .or_else(|| env::var("VECTORIZE_IRIS_BASE_URL").ok())
+            .or(config_base_url),
+        cli.api_url
+            .or_else(|| env::var("VECTORIZE_API_URL").ok())
+            .or(config_api_url),
+        cli.org_id
+            .or_else(|| env::var("VECTORIZE_ORG_ID").ok())
+            .or(config_org_id),
+    )?;
 
     // Automatically set infer_metadata_schema to false if metadata schemas are provided
     let infer_metadata_schema = if !cli.metadata_schemas.is_empty() {
@@ -1328,9 +1354,8 @@ fn main() -> Result<()> {
         // Process all files in directory
         return process_directory(
             &file_path,
-            &api_base_url,
+            &base_url,
             &api_token,
-            &org_id,
             &cli.output,
             cli.output_file.as_ref(),
             cli.chunk_size,
@@ -1348,9 +1373,8 @@ fn main() -> Result<()> {
 
     let result = extract_text(
         &file_path,
-        &api_base_url,
+        &base_url,
         &api_token,
-        &org_id,
         cli.chunk_size,
         cli.metadata_schemas,
         infer_metadata_schema,
@@ -1364,4 +1388,41 @@ fn main() -> Result<()> {
     format_output(&result, &cli.output, has_schemas, cli.output_file.as_ref())?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::resolve_base_url;
+
+    const HINDSIGHT: &str = "https://inference.hindsight.vectorize.io/v1";
+
+    #[test]
+    fn default_is_api_vectorize_io_with_the_org() {
+        assert_eq!(
+            resolve_base_url(None, None, Some("org-1".into())).unwrap(),
+            "https://api.vectorize.io/v1/org/org-1"
+        );
+    }
+
+    #[test]
+    fn api_url_still_replaces_only_the_host() {
+        assert_eq!(
+            resolve_base_url(None, Some("https://api.example/".into()), Some("org-1".into())).unwrap(),
+            "https://api.example/v1/org/org-1"
+        );
+    }
+
+    #[test]
+    fn base_url_is_used_as_given_and_needs_no_org() {
+        assert_eq!(resolve_base_url(Some(format!("{HINDSIGHT}/")), None, None).unwrap(), HINDSIGHT);
+        assert_eq!(
+            resolve_base_url(Some(HINDSIGHT.into()), Some("https://api.example".into()), Some("org-1".into())).unwrap(),
+            HINDSIGHT
+        );
+    }
+
+    #[test]
+    fn without_a_base_url_the_org_is_required() {
+        assert!(resolve_base_url(None, None, None).is_err());
+    }
 }
