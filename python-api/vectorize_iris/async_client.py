@@ -8,6 +8,7 @@ import aiohttp
 from typing import Optional
 from pathlib import Path
 
+from vectorize_iris.config import resolve
 from vectorize_iris.exceptions import VectorizeIrisError
 from vectorize_iris.models import (
     StartFileUploadRequest,
@@ -24,7 +25,7 @@ async def _extract_from_bytes_async(
     file_content: bytes,
     file_name: str,
     api_token: str,
-    org_id: str,
+    base_url: str,
     poll_interval: int,
     timeout: int,
     options: Optional[ExtractionOptions] = None
@@ -32,7 +33,6 @@ async def _extract_from_bytes_async(
     """
     Internal async function to extract from file bytes.
     """
-    base_url = f"https://api.vectorize.io/v1/org/{org_id}"
     headers = {
         "Authorization": f"Bearer {api_token}",
         "Content-Type": "application/json"
@@ -135,6 +135,7 @@ async def extract_text_async(
     file_name: str = "document.pdf",
     api_token: Optional[str] = None,
     org_id: Optional[str] = None,
+    base_url: Optional[str] = None,
     poll_interval: int = 2,
     timeout: int = 300,
     options: Optional[ExtractionOptions] = None
@@ -146,7 +147,10 @@ async def extract_text_async(
         file_bytes: File content as bytes
         file_name: Name of the file (default: "document.pdf")
         api_token: Vectorize access token (defaults to VECTORIZE_TOKEN env var)
-        org_id: Organization ID (defaults to VECTORIZE_ORG_ID env var)
+        org_id: Organization ID (defaults to VECTORIZE_ORG_ID env var); not needed with base_url
+        base_url: API root that /files and /extraction hang off (defaults to the
+            VECTORIZE_IRIS_BASE_URL env var, then https://api.vectorize.io/v1/org/{org_id}).
+            For Hindsight Inference: https://inference.hindsight.vectorize.io/v1
         poll_interval: Seconds to wait between status checks (default: 2)
         timeout: Maximum seconds to wait for extraction (default: 300)
         options: Extraction options (chunking, metadata, etc.)
@@ -157,18 +161,10 @@ async def extract_text_async(
     Raises:
         VectorizeIrisError: If extraction fails or times out
     """
-    # Get credentials from environment if not provided
-    api_token = api_token or os.getenv('VECTORIZE_TOKEN')
-    org_id = org_id or os.getenv('VECTORIZE_ORG_ID')
-
-    if not api_token or not org_id:
-        raise VectorizeIrisError(
-            "Missing credentials. Set VECTORIZE_TOKEN and VECTORIZE_ORG_ID "
-            "environment variables or pass them as parameters."
-        )
+    api_token, base_url = resolve(api_token, org_id, base_url)
 
     return await _extract_from_bytes_async(
-        file_bytes, file_name, api_token, org_id, poll_interval, timeout, options
+        file_bytes, file_name, api_token, base_url, poll_interval, timeout, options
     )
 
 
@@ -176,6 +172,7 @@ async def extract_text_from_file_async(
     file_path: str,
     api_token: Optional[str] = None,
     org_id: Optional[str] = None,
+    base_url: Optional[str] = None,
     poll_interval: int = 2,
     timeout: int = 300,
     options: Optional[ExtractionOptions] = None
@@ -186,7 +183,10 @@ async def extract_text_from_file_async(
     Args:
         file_path: Path to the file to extract text from
         api_token: Vectorize access token (defaults to VECTORIZE_TOKEN env var)
-        org_id: Organization ID (defaults to VECTORIZE_ORG_ID env var)
+        org_id: Organization ID (defaults to VECTORIZE_ORG_ID env var); not needed with base_url
+        base_url: API root that /files and /extraction hang off (defaults to the
+            VECTORIZE_IRIS_BASE_URL env var, then https://api.vectorize.io/v1/org/{org_id}).
+            For Hindsight Inference: https://inference.hindsight.vectorize.io/v1
         poll_interval: Seconds to wait between status checks (default: 2)
         timeout: Maximum seconds to wait for extraction (default: 300)
         options: Extraction options (chunking, metadata, etc.)
@@ -198,15 +198,7 @@ async def extract_text_from_file_async(
         VectorizeIrisError: If extraction fails or times out
         FileNotFoundError: If the file doesn't exist
     """
-    # Get credentials from environment if not provided
-    api_token = api_token or os.getenv('VECTORIZE_TOKEN')
-    org_id = org_id or os.getenv('VECTORIZE_ORG_ID')
-
-    if not api_token or not org_id:
-        raise VectorizeIrisError(
-            "Missing credentials. Set VECTORIZE_TOKEN and VECTORIZE_ORG_ID "
-            "environment variables or pass them as parameters."
-        )
+    api_token, base_url = resolve(api_token, org_id, base_url)
 
     # Validate file exists and read content
     file_path_obj = Path(file_path)
@@ -219,5 +211,5 @@ async def extract_text_from_file_async(
     file_name = file_path_obj.name
 
     return await _extract_from_bytes_async(
-        file_content, file_name, api_token, org_id, poll_interval, timeout, options
+        file_content, file_name, api_token, base_url, poll_interval, timeout, options
     )

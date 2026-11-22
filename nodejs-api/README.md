@@ -40,6 +40,19 @@ export VECTORIZE_TOKEN="your-token"
 export VECTORIZE_ORG_ID="your-org-id"
 ```
 
+### Hindsight Inference
+
+Iris also runs on [Hindsight Inference](https://inference.hindsight.vectorize.io). The API is the same;
+point the SDK at its base URL and use a Hindsight Inference API key. No organization ID is needed (the
+key identifies it):
+
+```bash
+export VECTORIZE_IRIS_BASE_URL="https://inference.hindsight.vectorize.io/v1"
+export VECTORIZE_TOKEN="hsk_..."   # your Hindsight Inference API key
+```
+
+Or per call: `extractTextFromFile('document.pdf', { apiToken: 'hsk_...', baseUrl: 'https://inference.hindsight.vectorize.io/v1' })`.
+
 ### Basic Usage
 
 ```typescript
@@ -370,6 +383,7 @@ Extract text from a buffer.
 interface ExtractionOptions {
   apiToken?: string;              // Override env var
   orgId?: string;                 // Override env var
+  baseUrl?: string;               // API root (env VECTORIZE_IRIS_BASE_URL); no orgId needed
   pollInterval?: number;          // ms between checks (default: 2000)
   timeout?: number;               // max ms to wait (default: 300000)
   type?: 'iris';                  // Extraction type

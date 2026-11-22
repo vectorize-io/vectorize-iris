@@ -68,8 +68,14 @@ export interface ExtractionResult {
 export interface ExtractionOptions {
   /** Vectorize access token (defaults to VECTORIZE_TOKEN env var) */
   apiToken?: string;
-  /** Organization ID (defaults to VECTORIZE_ORG_ID env var) */
+  /** Organization ID (defaults to VECTORIZE_ORG_ID env var); not needed with baseUrl */
   orgId?: string;
+  /**
+   * API root that /files and /extraction hang off (defaults to the VECTORIZE_IRIS_BASE_URL env var,
+   * then https://api.vectorize.io/v1/org/{orgId}). For Hindsight Inference, where the key identifies
+   * the organization: https://inference.hindsight.vectorize.io/v1
+   */
+  baseUrl?: string;
   /** Milliseconds between status checks (default: 2000) */
   pollInterval?: number;
   /** Maximum milliseconds to wait for extraction (default: 300000) */

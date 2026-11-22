@@ -30,6 +30,33 @@ export class VectorizeIrisError extends Error {
   }
 }
 
+const DEFAULT_API_URL = 'https://api.vectorize.io';
+
+/**
+ * The token and the API root requests go to. With a base URL (option or VECTORIZE_IRIS_BASE_URL)
+ * requests go to it as given and no organization ID is needed (Hindsight Inference takes it from
+ * the key); without one, to https://api.vectorize.io/v1/org/{orgId}.
+ */
+export function resolveEndpoint(
+  apiToken: string | undefined = process.env.VECTORIZE_TOKEN,
+  orgId: string | undefined = process.env.VECTORIZE_ORG_ID,
+  baseUrl: string | undefined = process.env.VECTORIZE_IRIS_BASE_URL
+): { apiToken: string; baseUrl: string } {
+  if (baseUrl) {
+    if (!apiToken) {
+      throw new VectorizeIrisError('Missing credentials. Set VECTORIZE_TOKEN or pass apiToken in options.');
+    }
+    return { apiToken, baseUrl: baseUrl.replace(/\/+$/, '') };
+  }
+  if (!apiToken || !orgId) {
+    throw new VectorizeIrisError(
+      'Missing credentials. Set VECTORIZE_TOKEN and VECTORIZE_ORG_ID ' +
+      'environment variables or pass them in options.'
+    );
+  }
+  return { apiToken, baseUrl: `${DEFAULT_API_URL}/v1/org/${orgId}` };
+}
+
 /**
  * Internal function to extract from file buffer
  */
@@ -37,12 +64,11 @@ async function _extractFromBuffer(
   fileBuffer: Buffer,
   fileName: string,
   apiToken: string,
-  orgId: string,
+  baseUrl: string,
   pollInterval: number,
   timeout: number,
   options: ExtractionOptions
 ): Promise<ExtractionResultData> {
-  const baseUrl = `https://api.vectorize.io/v1/org/${orgId}`;
   const headers = {
     'Authorization': `Bearer ${apiToken}`,
     'Content-Type': 'application/json'
@@ -198,27 +224,26 @@ export async function extractText(
   options: ExtractionOptions = {}
 ): Promise<ExtractionResultData> {
   const {
-    apiToken = process.env.VECTORIZE_TOKEN,
-    orgId = process.env.VECTORIZE_ORG_ID,
+    apiToken,
+    orgId,
+    baseUrl,
     pollInterval = 2000,
     timeout = 300000,
     type = 'iris',
     ...extractionOptions
   } = options;
 
-  // Validate credentials
-  if (!apiToken || !orgId) {
-    throw new VectorizeIrisError(
-      'Missing credentials. Set VECTORIZE_TOKEN and VECTORIZE_ORG_ID ' +
-      'environment variables or pass them in options.'
-    );
-  }
+  const endpoint = resolveEndpoint(
+    apiToken ?? process.env.VECTORIZE_TOKEN,
+    orgId ?? process.env.VECTORIZE_ORG_ID,
+    baseUrl ?? process.env.VECTORIZE_IRIS_BASE_URL
+  );
 
   return _extractFromBuffer(
     fileBuffer,
     fileName,
-    apiToken,
-    orgId,
+    endpoint.apiToken,
+    endpoint.baseUrl,
     pollInterval,
     timeout,
     { type, ...extractionOptions }
@@ -265,21 +290,20 @@ export async function extractTextFromFile(
   options: ExtractionOptions = {}
 ): Promise<ExtractionResultData> {
   const {
-    apiToken = process.env.VECTORIZE_TOKEN,
-    orgId = process.env.VECTORIZE_ORG_ID,
+    apiToken,
+    orgId,
+    baseUrl,
     pollInterval = 2000,
     timeout = 300000,
     type = 'iris',
     ...extractionOptions
   } = options;
 
-  // Validate credentials
-  if (!apiToken || !orgId) {
-    throw new VectorizeIrisError(
-      'Missing credentials. Set VECTORIZE_TOKEN and VECTORIZE_ORG_ID ' +
-      'environment variables or pass them in options.'
-    );
-  }
+  const endpoint = resolveEndpoint(
+    apiToken ?? process.env.VECTORIZE_TOKEN,
+    orgId ?? process.env.VECTORIZE_ORG_ID,
+    baseUrl ?? process.env.VECTORIZE_IRIS_BASE_URL
+  );
 
   // Validate file exists
   try {
@@ -295,8 +319,8 @@ export async function extractTextFromFile(
   return _extractFromBuffer(
     fileBuffer,
     fileName,
-    apiToken,
-    orgId,
+    endpoint.apiToken,
+    endpoint.baseUrl,
     pollInterval,
     timeout,
     { type, ...extractionOptions }

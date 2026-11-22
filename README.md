@@ -442,6 +442,20 @@ const result = await extractTextFromFile('document.pdf', {
 });
 ```
 
+### Hindsight Inference
+
+Iris also runs on [Hindsight Inference](https://inference.hindsight.vectorize.io), with the same API.
+Point any client at its base URL and use a Hindsight Inference API key; no organization ID is needed
+(the key identifies it):
+
+```bash
+export VECTORIZE_IRIS_BASE_URL="https://inference.hindsight.vectorize.io/v1"
+export VECTORIZE_TOKEN="hsk_..."   # your Hindsight Inference API key
+```
+
+Or per call: `base_url=` (Python), `baseUrl:` (Node.js), `--base-url` (CLI, or `base_url` in
+`~/.vectorize-iris/credentials`). Requires Python SDK 0.2.0, Node.js SDK 0.2.0 or CLI 0.2.0.
+
 ## Documentation
 
 For detailed documentation, API reference, and advanced features:
