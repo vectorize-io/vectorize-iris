@@ -17,7 +17,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/py-')
     permissions:
       id-token: write  # Required for trusted publishing
-      contents: read
+      contents: write  # Create GitHub Release step needs write
     steps:
       - uses: actions/checkout@v4
 
@@ -53,7 +53,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/node-')
     permissions:
       id-token: write  # Required for OIDC trusted publishing
-      contents: read
+      contents: write  # Create GitHub Release step needs write
     steps:
       - uses: actions/checkout@v4
 
